@@ -20,7 +20,7 @@
 #include <stdint.h>
 
 //this is where the runtime SLM files are (they are flashed to L2)
-#define SLM_FILES_PATH "../sim_files/slm_files"
+#define SLM_FILES_PATH "build/slm_files/"
 #define PKT_TASK_FILE "../sim_files/tasks.csv"
 #define PKT_DATA_FILE "../sim_files/data.bin"
 

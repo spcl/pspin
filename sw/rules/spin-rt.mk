@@ -10,13 +10,13 @@ TARGET_BIN=build/$(SPIN_APP_NAME)
 
 CFLAGS=-DPULP_CHIP_STR=bigpulp -DPULP_CHIP_FAMILY_STR=bigpulp -DPULP_CHIP=40 -DPULP_CHIP_FAMILY=7 -march=rv32imacxpulpv2 -D__riscv__ -MMD -MP $(SPIN_CFLAGS)
 LDFLAGS=-nostartfiles -nostdlib -Wl,--gc-sections -T $(PULP_SDK)/linker/config.ld -T $(PULP_SDK)/linker/link.ld $(SPIN_LDFLAGS)
-INCLUDE_FILES=-I$(PULP_SDK)/archi/include -I$(PULP_SDK)/hal/include -I${PSPIN_HW}/deps/axi/src/dma/frontends/pulp_cluster_frontend/lib/ -I${PSPIN_RT}/include/
+INCLUDE_FILES=-I$(PULP_SDK)/archi/include -I$(PULP_SDK)/hal/include -I${PSPIN_HW}/deps/axi/src/dma/frontends/pulp_cluster_frontend/lib/ -I${PSPIN_RT}/runtime/include/
 
 PULP_SRCS=$(PULP_SDK)/runtime/libs/io/io.c $(PULP_SDK)/runtime/libs/io/tinyprintf.c
 PULP_INC=-I$(PULP_SDK)/runtime/libs/io/
 
 #SRC_FILES=$(PSPIN_RT)/src/hpu.c $(PSPIN_RT)/src/handler.c ${SPIN_APP_SRCS}
-SRC_FILES=$(PSPIN_RT)/src/hpu.c ${SPIN_APP_SRCS}
+SRC_FILES=$(PSPIN_RT)/runtime/src/hpu.c ${SPIN_APP_SRCS}
 
 
 runtime-debug: 

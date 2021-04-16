@@ -9,7 +9,7 @@ PKT_SIZE ?= 1024
 PKT_DELAY ?= 78
 MSG_DELAY ?= 78
 
-include $(PSPIN_RT)/spin-rt.mk
+include $(PSPIN_RT)/rules/spin-rt.mk
 
 #0: only header; 1: transfer full packet; 2: custom transfer
 FULL_PKT ?= 0
@@ -72,11 +72,11 @@ patch:
 	done
 
 simulate::
-	$(PSPIN_RT)/bin/spin_run 0 | tee transcript
+	$(PSPIN_RT)/scripts/spin_run.sh 0 | tee transcript
 	cp $(PSPIN_HW)/verilator_model/trace_* .
 
 simulate-debug::
-	$(PSPIN_RT)/bin/spin_run 1 | tee transcript
+	$(PSPIN_RT)/scripts/spin_run.sh 1 | tee transcript
 	cp $(PSPIN_HW)/verilator_model/trace_* .
 	cp $(PSPIN_HW)/verilator_model/waves.vcd .
 
