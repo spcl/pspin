@@ -12,22 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <handler.h>
-#include <packets.h>
-#include <spin_dma.h>
+#include <stdint.h>
+#include "gdriver.h"
 
-
-__handler__ void hostdirect_ph(handler_args_t *args) 
+int main(int argc, char**argv)
 {
-    spin_cmd_t xfer;
-    spin_host_write(0xdeadbeef, 0xcafebebe, &xfer);
-}
+    const char *handlers_file="build/copy_from_host";
+    const char *hh=NULL;
+    const char *ph="copy_from_host_ph";
+    const char *th=NULL;
 
-void init_handlers(handler_fn * hh, handler_fn *ph, handler_fn *th, void **handler_mem_ptr)
-{
-    volatile handler_fn handlers[] = {NULL, hostdirect_ph, NULL};
-    *hh = handlers[0];
-    *ph = handlers[1];
-    *th = handlers[2];
-}
+    gdriver_init(argc, argv, handlers_file, hh, ph, th);
+   
+    gdriver_run();
 
+    gdriver_fini();
+    return 0;
+}

@@ -7,7 +7,7 @@ trace_file=$2
 #pc_handler_start=$2
 #pc_handler_end=$3
 
-cfile=$PSPIN_RT/src/hpu.c
+cfile=$PSPIN_RT/runtime/src/hpu.c
 
 hstart_line=$(grep -nH "TELEMETRY: HANDLER:START" $cfile)
 hstop_line=$(grep -nH "TELEMETRY: HANDLER:END" $cfile)

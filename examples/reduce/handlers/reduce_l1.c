@@ -1,3 +1,17 @@
+// Copyright 2020 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #ifndef HOST
 #include <handler.h>
 #else
@@ -19,18 +33,6 @@
 // 4 uint32_t -> L1 addresses
 // 1 uint32_t -> msg_count (now 0x0200)
 
-#ifndef HOST
-typedef uint32_t pspin_mem_ptr_t;
-volatile __attribute__((section(".l2_handler_data"))) uint8_t handler_mem[] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2, 0x0, 0x0};
-#else
-typedef uint64_t pspin_mem_ptr_t;
-volatile __attribute__((section(".l2_handler_data"))) uint8_t handler_mem[] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2, 0x0, 0x0};
-#endif
-
-
-__handler__ void reduce_l1_hh(handler_args_t *args)
-{
-}
 __handler__ void reduce_l1_ph(handler_args_t *args)
 {
 
@@ -50,7 +52,7 @@ __handler__ void reduce_l1_ph(handler_args_t *args)
     {
         amo_add(&(local_mem[i]), nic_pld_addr[i]);
     }
-    // We do need atomics here, as each handler writes to the same adress as other in the same cluster.
+    // We do need atomics here, as each handler writes to the same adress as others in the same cluster.
 }
 __handler__ void reduce_l1_th(handler_args_t *args)
 {
@@ -65,10 +67,8 @@ __handler__ void reduce_l1_th(handler_args_t *args)
 
 void init_handlers(handler_fn *hh, handler_fn *ph, handler_fn *th, void **handler_mem_ptr)
 {
-    volatile handler_fn handlers[] = {reduce_l1_hh, reduce_l1_ph, reduce_l1_th};
+    volatile handler_fn handlers[] = {NULL, reduce_l1_ph, reduce_l1_th};
     *hh = handlers[0];
     *ph = handlers[1];
     *th = handlers[2];
-
-    *handler_mem_ptr = (void *)handler_mem;
 }

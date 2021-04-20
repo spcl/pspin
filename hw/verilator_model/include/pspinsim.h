@@ -49,7 +49,7 @@ typedef struct pcie_slv_conf
 } pcie_slv_conf_t;
 
 typedef struct pspin_conf {
-    char *slm_files_path;
+    const char *slm_files_path;
     ni_conf_t ni_conf;
     no_conf_t no_conf;
     pcie_slv_conf_t pcie_slv_conf;

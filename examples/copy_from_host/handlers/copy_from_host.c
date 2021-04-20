@@ -10,10 +10,6 @@
 #define TO_L1
 #endif
 
-volatile __attribute__((section(".l2_handler_data"))) uint8_t handler_mem[] = {0xde, 0xad, 0xbe, 0xef};
-
-
-__handler__ void copy_from_host_hh(handler_args_t *args) {;}
 __handler__ void copy_from_host_ph(handler_args_t *args)
 {
     task_t* task = args->task;
@@ -45,14 +41,12 @@ __handler__ void copy_from_host_ph(handler_args_t *args)
     spin_cmd_t send;
     spin_send_packet(nic_pld_addr, pkt_pld_len, &send);
 }
-__handler__ void copy_from_host_th(handler_args_t *args){;}
 
 void init_handlers(handler_fn * hh, handler_fn *ph, handler_fn *th, void **handler_mem_ptr)
 {
-    volatile handler_fn handlers[] = {copy_from_host_hh, copy_from_host_ph, copy_from_host_th};
+    volatile handler_fn handlers[] = {NULL, copy_from_host_ph, NULL};
     *hh = handlers[0];
     *ph = handlers[1];
     *th = handlers[2];
 
-    *handler_mem_ptr = (void*) handler_mem;
 }

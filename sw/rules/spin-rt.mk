@@ -36,9 +36,7 @@ deploy::
 	cd build/slm_files && \
 	$(PULP_SDK)/scripts/s19toslm.py ../$(SPIN_APP_NAME).s19 && \
 	$(PULP_SDK)/bin/slm_conv -n 16384 -f l2_hnd_stim.slm -S 1 -P 32 && \
-	python $(PULP_SDK)/bin/rename_l2.py hnd && \
-	mkdir -p ${TARGET_SLM} && \
-	cp *.slm ${TARGET_SLM} 
+	python $(PULP_SDK)/bin/rename_l2.py hnd 
 	$(OBJDUMP) -S build/$(SPIN_APP_NAME) > build/$(SPIN_APP_NAME).disasm
 
 install:

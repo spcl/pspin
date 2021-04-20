@@ -31,19 +31,19 @@ typedef struct udp_hdr
     uint16_t            checksum;
 } __attribute__((__packed__)) udp_hdr_t;
 
-
+/*
 typedef struct app_hdr
 { //QUIC-like
     uint64_t            connection_id;
     uint16_t            packet_num;
     uint16_t             frame_type; //frame_type 1: connection closing
 } __attribute__((__packed__)) app_hdr_t;
-
+*/
 typedef struct pkt_hdr
 {
     ip_hdr_t  ip_hdr;
     udp_hdr_t udp_hdr;
-    app_hdr_t app_hdr;
+    //app_hdr_t app_hdr;
 }  __attribute__((__packed__)) pkt_hdr_t;
 
 #endif /* PACKETS_H */

@@ -1,3 +1,17 @@
+// Copyright 2020 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #ifndef HOST
 #include <handler.h>
 #else
@@ -6,18 +20,13 @@
 
 #include <packets.h>
 #include <spin_conf.h>
+#include "filtering.h"
 
 #define MAX_HPUS_IN_CLUSTER 4
 #define STRIDE 1
 #define OFFSET 0
 #define NUM_INT_OP 0
 // Handler that implements reduce in scratchpad for int32
-#include "hash_maker/f_d.h"
-
-#define KEY_SIZE 8
-
-//number of 32-bit words fitting in 1 MiB
-#define TOT_WORDS 262144
 
 #define HASH_JEN_MIX(a,b,c)                                                      \
 do {                                                                             \
@@ -72,15 +81,10 @@ do {                                                                            
   HASH_JEN_MIX(_hj_i, _hj_j, hashv);                                             \
 } while (0)
 
-__handler__ void filtering_hh(handler_args_t *args)
-{
-
-}
 __handler__ void filtering_ph(handler_args_t *args)
 {
     task_t* task = args->task;
 
-    ip_hdr_t *ip_hdr = (ip_hdr_t*) (task->pkt_mem);  
     uint32_t *mem = (uint32_t *) task->handler_mem;
     uint8_t *key_byte = (uint8_t*) task->pkt_mem;
 
@@ -96,16 +100,12 @@ __handler__ void filtering_ph(handler_args_t *args)
     spin_dma_to_host(host_address, task->l2_pkt_mem, task->pkt_mem_size, 0, &cpy);       
   
 }
-__handler__ void filtering_th(handler_args_t *args)
-{
-}
+
 
 void init_handlers(handler_fn *hh, handler_fn *ph, handler_fn *th, void **handler_mem_ptr)
 {
-    volatile handler_fn handlers[] = {filtering_hh, filtering_ph, filtering_th};
+    volatile handler_fn handlers[] = {NULL, filtering_ph, NULL};
     *hh = handlers[0];
     *ph = handlers[1];
     *th = handlers[2];
-
-    *handler_mem_ptr = (void *)handler_mem;
 }
