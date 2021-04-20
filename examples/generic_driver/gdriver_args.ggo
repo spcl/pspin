@@ -1,0 +1,10 @@
+version "1.0"
+package "Generic simulation driver"
+purpose "Generic simulation driver"
+
+# Options
+option "num-messages" m "Number of messages" optional int default="1"
+option "num-packets" p "Number of packets per message" optional int default="32"
+option "packet-size" s "Packet size" optional int default="1024"
+option "packet-delay" d "Delay (in ns) between consecutive packets" optional int default="20"
+option "message-delay" l "Delay (in ns) between consecutive messages" optional int default="40"
