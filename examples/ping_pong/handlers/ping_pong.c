@@ -12,19 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef HOST
 #include <handler.h>
 #include <packets.h>
 #include <spin_dma.h>
-#else
-#include <handler_profiler.h>
-#endif
 
 #if !defined(FROM_L2) && !defined(FROM_L1)
 #define FROM_L1
 #endif
-
-volatile __attribute__((section(".l2_handler_data"))) uint8_t handler_mem[] = {0xde, 0xad, 0xbe, 0xef};
 
 __handler__ void pingpong_ph(handler_args_t *args)
 {
