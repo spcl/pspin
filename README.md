@@ -29,23 +29,27 @@ PsPIN [1] is an implementation of the sPIN programming model [2] based on PULP [
 Here is a walkthrough to setup the simulation and run example handlers. 
 
 ### 1. Setting up the environment 
+ Copy the `sourceme-template.sh` file to `sourceme.sh` and update the following variables:
  
+ ```bash
+export RISCV_GCC=<path to the RISC-V GCC toolchain binaries, e.g., /home/salvo/riscv-gcc/bin/>
+export PSPIN_HW=<path to the hw, e.g., /home/salvo/pspin/hw/>
+export PSPIN_RT=<path to the sw, e.g., /home/salvo/pspin/sw/>
+```
 
 ### 2. Verilating the hardware
-```
+
+Verilating the hardware is needed whenever you want test new hardware changes that are not available in the relased packeges. The verilation process can take quite long time (20-30 minutes on a Xeon X7550) and can require up to 16 GB of memory. Consider to use the prebuilt libraries if they fit your use case. 
+
+```bash
 cd hw/verilator_model/
-```
 
-Compile `libpspin.so`:
-```
+# Compile `libpspin.so`
 make release
-```
 
-(Optional) Compile `libpspin_debug.so`:
-```
+# (Optional) Compile `libpspin_debug.so`
 make debug
 ```
-
 
 ### 3. Compile handlers and simulation driver
 
