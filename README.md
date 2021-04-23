@@ -131,6 +131,9 @@ It reports the following information:
 
 Alternatively, you produce JSON trace with `make trace-chrome` and visualize them with your browser (type `about://tracing` in the address bar and load the JSON file). Works on Google Chrome, Chromimum, and Firefox. 
 
+<div align="center"><img src="trace_example.png" alt="Visualizing execution traces" /></div>
+
+
 Note: the tracing tool is available at https://github.com/SalvatoreDiGirolamo/tracevis and can be used to produce enriched traces from RI5CY traces.
 
 ## Citation
