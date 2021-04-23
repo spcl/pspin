@@ -63,7 +63,7 @@ typedef uint32_t spin_nic_addr_t;
 
 int spin_nicmem_write(spin_nic_addr_t addr, void *data, size_t size, void* user_ptr);
 int spin_nicmem_read(spin_nic_addr_t addr, void *data, size_t size, void* user_ptr);
-int spin_find_handler_by_name(char *binfile, char* handler_name, spin_nic_addr_t *handler_addr, size_t *handler_size);
+int spin_find_handler_by_name(const char *binfile, const char* handler_name, spin_nic_addr_t *handler_addr, size_t *handler_size);
 
 #ifdef __cplusplus  
 } // extern "C"  
