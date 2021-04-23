@@ -9,18 +9,18 @@ PsPIN [1] is an implementation of the sPIN programming model [2] based on PULP [
 
 The repositority has the following structure:
 
- - hw/ 
-   - hw/deps: (RTL) Dependencies from the PULP platform (https://github.com/pulp-platform). Some of them have been adapted to fit in the PsPIN design. **License:** SolderPad 0.51.
-   - hw/src: (RTL) PsPIN components. **License:** SolderPad 0.51.
-   - hw/verilator_model: (functional) Components implementing the NIC model shown by the above figure. **License:** Apache 2.0.
- - sw/ 
-   - sw/pulp-sdk: Dependencies from the PULP SDK adapted to fit the PsPIN design. **License:** Apache 2.0.
-   - sw/rules: Makefile rules used to ease simulutions setups and runs. **License:** Apache 2.0.
-   - sw/runtime: HPUs main loop and support functions for the handlers. **License:** Apache 2.0.
-   - sw/script: utilities for extracting data from the simulation output. **License:** Apache 2.0.
- - examples/ Examples of sPIN handlers. **License:** Apache 2.0.
-    - examples/*/driver/. Simulation driver.
-    - examples/*/handlers/. Handlers code.
+ - `hw/`: Hardware components and simulation logic.
+   - `hw/deps/`: (RTL) Dependencies from the PULP platform (https://github.com/pulp-platform). Some of them have been adapted to fit in the PsPIN design. **License:** SolderPad 0.51.
+   - `hw/src/`: (RTL) PsPIN components. **License:** SolderPad 0.51.
+   - `hw/verilator_model/`: (functional) Components implementing the NIC model shown by the above figure. **License:** Apache 2.0.
+ - `sw/`: Software components. **License:** Apache 2.0.
+   - `sw/pulp-sdk/`: Dependencies from the PULP SDK adapted to fit the PsPIN design. 
+   - `sw/rules/`: Makefile rules used to ease simulutions setups and runs. 
+   - `sw/runtime/`: HPUs main loop and support functions for the handlers. 
+   - `sw/script/`: utilities for extracting data from the simulation output. 
+ - `examples/`: Examples of sPIN handlers. **License:** Apache 2.0.
+    - `examples/*/driver/`. Simulation driver.
+    - `examples/*/handlers/`. Handlers code.
 
 ## References
 
