@@ -23,7 +23,21 @@ PsPIN [1] is an implementation of the sPIN programming model [2] based on PULP [
 
 ## Getting started
 
-TODO
+### Dependencies
+ - Verilator > v4.100 (https://www.veripool.org/wiki/verilator)
+ - RISC-V GCC toolchain (source: https://github.com/pulp-platform/pulp-riscv-gnu-toolchain; prebuilt: link here)
+
+### 1. Setting up the environment 
+ 
+
+### 2. Verilating the hardware
+
+### 3. Compile handlers and simulation driver
+
+### 4. Run! 
+
+### 5. Check data
+
 
 ## Citation
 
