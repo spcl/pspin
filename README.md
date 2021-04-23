@@ -124,6 +124,10 @@ It reports the following information:
  - instruction mnemonic: `lhu`
  - full instruction with actual register values: `lhu  x12, 2(x14)         x12=00000400 x14:1000bc00  PA:1000bc02`
 
+Alternatively, you produce JSON trace with `make trace-chrome` and visualize them with your browser (type `about://tracing` in the address bar and load the JSON file). Works on Google Chrome, Chromimum, and Firefox. 
+
+Note: the tracing tool is available at https://github.com/SalvatoreDiGirolamo/tracevis and can be used to produce enriched traces from RI5CY traces.
+
 ## Citation
 
 Please include this citation if you use this work as part of your project:
