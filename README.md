@@ -15,7 +15,7 @@ PsPIN [1] is an implementation of the sPIN programming model [2] based on PULP [
  - `sw/`: Software components. **License:** Apache 2.0.
    - `sw/pulp-sdk/`: Dependencies from the PULP SDK adapted to fit the PsPIN design. 
    - `sw/rules/`: Makefile rules used to ease simulutions setups and runs. 
-   - `sw/runtime/`: HPUs main loop and support functions for the handlers. 
+   - `sw/runtime/`: HPUs runtime code and support functions for the handlers. 
    - `sw/script/`: utilities for extracting data from the simulation output. 
  - `examples/`: Examples of sPIN handlers. **License:** Apache 2.0.
     - `examples/*/driver/`. Simulation driver.
