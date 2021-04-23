@@ -37,6 +37,11 @@ export PSPIN_HW=<path to the hw, e.g., /home/salvo/pspin/hw/>
 export PSPIN_RT=<path to the sw, e.g., /home/salvo/pspin/sw/>
 ```
 
+**Source this file every time you want to run simulations!**
+```bash 
+source sourceme.sh
+```
+
 ### 2. Verilating the hardware
 
 Verilating the hardware is needed whenever you want test new hardware changes that are not available in the relased packeges. The verilation process can take quite long time (20-30 minutes on a Xeon X7550) and can require up to 16 GB of memory. Consider to use the prebuilt libraries if they fit your use case. 
@@ -51,11 +56,18 @@ make release
 make debug
 ```
 
-### 3. Compile handlers and simulation driver
+### 3. Compile handlers and simulation driver and run! 
+Here we show how to compile&run the `ping-pong` example. Same instructions apply for other examples too. 
 
-### 4. Run! 
+```bash
+cd examples/ping_pong
+make all
+```
 
-### 5. Check data
+This prouduces two executable: `sim_ping_pong` (linked against `libpspin.so`) and `sim_ping_pong_debug` (linked against `libpspin_debug.so`). Type `./sim_ping_pong --help` to see the possible command-line arguments or just run `./sim_ping_pong` to run with the default arguments.
+
+
+### 4. Check data
 
 
 ## Citation
