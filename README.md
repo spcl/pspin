@@ -27,7 +27,7 @@ PsPIN [1] is an implementation of the sPIN programming model [2] based on PULP [
     - `examples/*/handlers/`. Handlers code.
 
 ## Dependencies
- - Verilator > v4.100 (https://www.veripool.org/wiki/verilator)
+ - Verilator >= v4.108 (https://www.veripool.org/wiki/verilator)
  - RISC-V GCC toolchain (source: https://github.com/pulp-platform/pulp-riscv-gnu-toolchain; prebuilt: [Ubuntu-x86-64](http://spclstorage.inf.ethz.ch/~digirols/pspin/riscv-gcc-ubuntu.tar.gz))
 
 ## Getting started
