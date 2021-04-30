@@ -1,6 +1,5 @@
 name: Build&Deploy Docker
 
-# Run workflow on tags starting with v (eg. v2, v1.2.0)
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
