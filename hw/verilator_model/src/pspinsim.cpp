@@ -144,7 +144,7 @@ int pspinsim_init(int argc, char **argv, pspin_conf_t *conf)
     sim->add_module(*pcie_mst);
 
     //before the reset!    
-    char *slm_files_path = conf->slm_files_path;
+    const char *slm_files_path = conf->slm_files_path;
     if (slm_files_path==NULL) {
         char *pspin_hw_env = getenv("PSPIN_HW");
         if (pspin_hw_env == NULL) {

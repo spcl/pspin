@@ -77,6 +77,9 @@ typedef struct sim_descr
     void *l2_img_to_copy;
     size_t l2_img_to_copy_size;
 
+    // counters
+    uint32_t packets_sent;
+    uint32_t packets_processed;
 } sim_descr_t;
 
 static sim_descr_t sim_state;
@@ -125,6 +128,7 @@ int make_ec()
     }
 }
 
+
 void generate_packets()
 {
     spin_ec_t ec;
@@ -155,6 +159,7 @@ void generate_packets()
             bool is_last = (pkt_idx + 1 == sim_state.num_packets);
             uint32_t delay = (is_last) ? sim_state.message_delay : sim_state.packet_delay;
             pspinsim_packet_add(&(sim_state.ec), msg_idx, pkt_buff, pkt_size, l1_pkt_size, is_last, delay, 0);
+            sim_state.packets_sent++;
         }
     }
 
@@ -167,6 +172,11 @@ void pcie_mst_write_complete(void *user_ptr)
 {
     printf("Write to NIC memory completed (user_ptr: %p)\n", user_ptr);
     generate_packets();
+}
+
+void feedback(uint64_t user_ptr, uint64_t nic_arrival_time, uint64_t pspin_arrival_time, uint64_t feedback_time)
+{
+    sim_state.packets_processed++;
 }
 
 /*** interface ***/
@@ -200,6 +210,7 @@ int gdriver_init(int argc, char **argv, const char *hfile, const char *hh, const
     pspinsim_init(argc, argv, &conf);
 
     pspinsim_cb_set_pcie_mst_write_completion(pcie_mst_write_complete);
+    pspinsim_cb_set_pkt_feedback(feedback);
 
     memset(&sim_state, 0, sizeof(sim_state));
 
@@ -258,6 +269,6 @@ int gdriver_run()
 int gdriver_fini()
 {
     if (pspinsim_fini() == SPIN_SUCCESS)
-        return GDRIVER_OK;
+        return sim_state.packets_sent == sim_state.packets_processed;
     return GDRIVER_ERR;
 }

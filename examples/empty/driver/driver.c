@@ -34,6 +34,5 @@ int main(int argc, char**argv)
    
     gdriver_run();
 
-    gdriver_fini();
-    return 0;
+    return (gdriver_fini()) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 FROM ubuntu:18.04 as build-hw
 WORKDIR /tools
-ARG VERILATOR_VERSION=4.100
+ARG VERILATOR_VERSION=4.108
 
 RUN apt-get update --assume-yes && \
     apt-get install --assume-yes \
-        wget curl gnupg gnupg2 git
+    wget curl gnupg gnupg2 git build-essential python gengetopt
 
 # Install Verilator
 RUN echo 'deb http://download.opensuse.org/repositories/home:/phiwag:/edatools/xUbuntu_18.04/ /' | tee /etc/apt/sources.list.d/home:phiwag:edatools.list && \
@@ -28,11 +27,30 @@ RUN echo 'deb http://download.opensuse.org/repositories/home:/phiwag:/edatools/x
     apt-get clean ; \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/*
 
-
 # Get RISCV-GCC toolchain
 RUN wget spclstorage.inf.ethz.ch/~digirols/pspin/riscv-gcc-ubuntu.tar.gz && \
     tar -xvf /tools/riscv-gcc-ubuntu.tar.gz -C /tools && \
-    chmod 777 -R /tools/riscv-gcc/
+    chmod 777 -R /tools/riscv-gcc/ && \
+    rm /tools/riscv-gcc-ubuntu.tar.gz
 
 WORKDIR /home/
 
+# Get repo and configure paths
+RUN git clone https://github.com/spcl/pspin.git && \
+    cd pspin && \
+    cat sourceme-template.sh | \ 
+    sed "s%RISCV_GCC=%RISCV_GCC=/tools/riscv-gcc/bin/%g" | \
+    sed "s%PSPIN_HW=%PSPIN_HW=/home/pspin/hw/%g" | \
+    sed "s%PSPIN_RT=%PSPIN_RT=/home/pspin/sw%g" > sourceme.sh && \
+    
+# Verilate
+RUN export VERILATOR_HOME=/usr/share/verilator/ && \
+    cd pspin/hw/verilator_model/ && \
+    make release
+
+# Test
+RUN source pspin/sourceme.sh && \
+    cd pspin/examples/empty && \
+    make deploy && \
+    make driver && \
+    make run

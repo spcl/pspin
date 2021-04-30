@@ -2,7 +2,6 @@ PSPIN_VERSION ?= undef
 VERILATOR_CMD ?= verilator
 VERILATOR_CC=$(VERILATOR_BIN)$(VERILATOR_CMD)
 TOP_MODULE=pspin_verilator
-SIM_EXE_SRCS=src/main.cpp
 SIM_LIB_SRCS=src/pspinsim.cpp
 
 TRACE_DEPTH?=6
@@ -236,38 +235,15 @@ SV_SRCS=../deps/axi/src/axi_pkg.sv \
 
 .PHONY: archive
 
-lib/libpspin_debug.so:
+debug:
 	$(VERILATOR_CC) $(VFLAGS_DEBUG) $(SV_INC) -cc $(SV_SRCS) --top-module $(TOP_MODULE) --build $(SIM_LIB_SRCS) -o pspin
 	@mkdir -p lib/
 	$(CXX) $(LIB_DEBUG_FLAGS) -o lib/libpspin_debug.so $(SIM_LIB_SRCS) obj_dir_debug/Vpspin_verilator__ALL.a $(VERILATOR_HOME)/include/verilated.cpp $(VERILATOR_HOME)/include/verilated_vcd_c.cpp
 
-lib/libpspin.so:
+release:
 	$(VERILATOR_CC) $(VFLAGS_RELEASE) $(SV_INC) -cc $(SV_SRCS) --top-module $(TOP_MODULE) --build $(SIM_LIB_SRCS) -o pspin
 	@mkdir -p lib/
 	$(CXX) $(LIB_RELEASE_FLAGS) -o lib/libpspin.so $(SIM_LIB_SRCS) obj_dir_release/Vpspin_verilator__ALL.a $(VERILATOR_HOME)/include/verilated.cpp 
-
-release: lib/libpspin.so
-	@mkdir -p bin/
-	$(CC) $(EXE_RELEASE_FLAGS) $(SIM_EXE_SRCS) -Llib/ -lpspin -o bin/pspin_release
-
-debug: lib/libpspin_debug.so 
-	@mkdir -p bin/
-	$(CC) $(EXE_DEBUG_FLAGS) $(SIM_EXE_SRCS) -Llib/ -lpspin_debug -o bin/pspin_debug
-
-build-debug: debug
-	@mkdir -p verilator/
-	@mkdir -p verilator/bin/
-	cp start_sim.sh verilator/
-	cp bin/pspin_debug verilator/bin/
-	cp -r lib/ verilator/
-
-build-release: release
-	@mkdir -p verilator/
-	@mkdir -p verilator/bin/
-	cp start_sim.sh verilator/
-	cp bin/pspin_release verilator/bin/
-	cp -r lib/ verilator/
-
 
 clean:
 	@rm -rf obj_dir_debug/ obj_dir_release/ bin/pspin bin/pspin_debug lib/libpspin.so lib/libpspin_debug.so > /dev/null 2> /dev/null
