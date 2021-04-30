@@ -19,7 +19,7 @@ ARG VERILATOR_VERSION=4.100
 
 RUN apt-get update --assume-yes && \
     apt-get install --assume-yes \
-        wget curl gnupg gnupg2
+        wget curl gnupg gnupg2 git
 
 # Install Verilator
 RUN echo 'deb http://download.opensuse.org/repositories/home:/phiwag:/edatools/xUbuntu_18.04/ /' | tee /etc/apt/sources.list.d/home:phiwag:edatools.list && \
@@ -35,5 +35,4 @@ RUN wget spclstorage.inf.ethz.ch/~digirols/pspin/riscv-gcc-ubuntu.tar.gz && \
     chmod 777 -R /tools/riscv-gcc/
 
 WORKDIR /home/
-
 
