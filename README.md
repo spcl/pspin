@@ -27,8 +27,8 @@ PsPIN [1] is an implementation of the sPIN programming model [2] based on PULP [
     - `examples/*/handlers/`. Handlers code.
 
 ## Dependencies
- - Verilator > v4.100 (https://www.veripool.org/wiki/verilator)
- - RISC-V GCC toolchain (source: https://github.com/pulp-platform/pulp-riscv-gnu-toolchain; prebuilt: link here)
+ - Verilator >= v4.108 (https://www.veripool.org/wiki/verilator)
+ - RISC-V GCC toolchain (source: https://github.com/pulp-platform/pulp-riscv-gnu-toolchain; prebuilt: [Ubuntu-x86-64](http://spclstorage.inf.ethz.ch/~digirols/pspin/riscv-gcc-ubuntu.tar.gz))
 
 ## Getting started
 Here is a walkthrough to setup the simulation and run example handlers. 
@@ -100,7 +100,7 @@ PCIe Master:
 
 It reports information for each of the functional modules (i.e., NIC inbound and outbound engines, PCIe). 
 
-To gain more insights, you can type: `make info``` to produce information about the executed handlers:
+To gain more insights, you can type: `make info` to produce information about the executed handlers:
 ```
 #[key] handler cluster_id core_id start_time end_time latency instructions loads stores bsws branches l2_accesses local_l1_accesses remote_l1_accesses other_accesses
  pingpong_ph 00 0 1225000 1312000 87000 29 9 10 0 0 0 11 0 8
