@@ -58,6 +58,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#running-examples" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -258,10 +263,49 @@
       <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
       
       
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Running examples
+          <span class="md-nav__icon md-icon"></span>
+        </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
         Running examples
       </a>
+      
+        
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#compile-handlers-and-simulation-driver-and-run" class="md-nav__link">
+    Compile handlers and simulation driver and run!
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#check-data" class="md-nav__link">
+    Check data
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -346,6 +390,45 @@
               </div>
             
             
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#compile-handlers-and-simulation-driver-and-run" class="md-nav__link">
+    Compile handlers and simulation driver and run!
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#check-data" class="md-nav__link">
+    Check data
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
           
           <div class="md-content" data-md-component="content">
             <article class="md-content__inner md-typeset">
@@ -356,9 +439,65 @@
                   </a>
                 
                 
-                  <h1>Running examples</h1>
-                
-                <p>TODO</p>
+                <h1 id="running-examples">Running examples</h1>
+<h3 id="compile-handlers-and-simulation-driver-and-run">Compile handlers and simulation driver and run!</h3>
+<p>Here we show how to compile&amp;run the <code>ping-pong</code> example. Same instructions apply for other examples too. </p>
+<pre><code class="language-bash">cd examples/ping_pong
+make all
+</code></pre>
+<p>This prouduces two executable: <code>sim_pingpong</code> (linked against <code>libpspin.so</code>) and <code>sim_pingpong_debug</code> (linked against <code>libpspin_debug.so</code>). Type <code>./sim_pingpong --help</code> to see the possible command-line arguments or just run <code>./sim_pingpong</code> to run with the default arguments.</p>
+<h3 id="check-data">Check data</h3>
+<p>The simulation produces a summary at the end that looks like this:</p>
+<pre><code>###### Statistics ######
+NIC inbound engine:
+    Packets: 32; Bytes: 32768
+    Avg packet length: 1024.000 B
+    Feedback throughput: 443.197 Gbit/s (feedback arrival time: 18.484 ns)
+    Packet latency: avg: 119.750 ns; min: 108 ns; max: 155 ns
+    HER stalls: 0
+----------------------------------
+NIC outbound engine:
+    Commands: 32; Packets: 32; Bytes: 32768
+    Avg packet length: 1024.000 B
+    Packet throughput: 443.197 Gbit/s (pkt departure time: 18.484 ns)
+----------------------------------
+PCIe Slave:
+    Writes: beats: 0; bytes: 0; avg throughput: -nan Gbit/s
+    Reads: beats: 0; bytes: 0; avg throughput: -nan Gbit/s
+----------------------------------
+PCIe Master:
+    Bytes written: 0; Bytes read: 0
+----------------------------------
+</code></pre>
+<p>It reports information for each of the functional modules (i.e., NIC inbound and outbound engines, PCIe). </p>
+<p>To gain more insights, you can type: <code>make info</code> to produce information about the executed handlers:</p>
+<pre><code>#[key] handler cluster_id core_id start_time end_time latency instructions loads stores bsws branches l2_accesses local_l1_accesses remote_l1_accesses other_accesses
+ pingpong_ph 00 0 1225000 1312000 87000 29 9 10 0 0 0 11 0 8
+ pingpong_ph 00 0 1325000 1363000 38000 29 9 10 0 0 0 11 0 8
+ pingpong_ph 00 0 1385000 1423000 38000 29 9 10 0 0 0 11 0 8
+ pingpong_ph 00 0 1445000 1483000 38000 29 9 10 0 0 0 11 0 8
+...
+</code></pre>
+<p>In particular, it shows for each executed handler, the cluster and core where it has been executed, the starting and ending times (in picoseconds), the duration (in picoseconds), total number of instructions, and number of instructions per instruction class.</p>
+<p>We also provide a tool for quick&amp;raw data visualization: <code>make stats</code> (note: needs gnuplot installed). It works only if you redirected the simulation stdout to a <code>transcript</code> file (e.g., <code>./sim_pingpong &gt; transcript</code>).</p>
+<p><strong>Debugging:</strong> in order to debug the handlers, you can produce a trace of all executed instructions with <code>make trace</code>. The output reports one instruction per line:</p>
+<pre><code>1845000 1841 1000 00 1 pingpong_ph 1d0003b2 ping_pong.c:38 lhu &quot;lhu  x12, 2(x14)         x12=00000400 x14:1000bc00  PA:1000bc02&quot;
+</code></pre>
+<p>It reports the following information:
+ - time at which the instruction completed (picoseconds): <code>1845000</code>
+ - time at which the instruction completed (cycles): <code>1845</code>
+ - duration (picoseconds): <code>1000</code>
+ - cluster ID from where the instruction originated: <code>00</code>
+ - core ID (relative to the cluster) from where the instruction originated: <code>1</code>
+ - function name: <code>pingpong_ph</code>
+ - program counter: <code>1d0003b2</code>
+ - file:line: <code>ping_pong.c:38</code>
+ - instruction mnemonic: <code>lhu</code>
+ - full instruction with actual register values: <code>lhu  x12, 2(x14)         x12=00000400 x14:1000bc00  PA:1000bc02</code></p>
+<p>Alternatively, you produce JSON trace with <code>make trace-chrome</code> and visualize them with your browser (type <code>about://tracing</code> in the address bar and load the JSON file). Works on Google Chrome, Chromimum, and Firefox. </p>
+<div align="center"><img src="trace_example.png" alt="Visualizing execution traces" /></div>
+
+<p>Note: the tracing tool is available at https://github.com/SalvatoreDiGirolamo/tracevis and can be used to produce enriched traces from RI5CY traces.</p>
                 
               
               
