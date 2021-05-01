@@ -1,7 +1,3 @@
-
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![License](https://img.shields.io/badge/License-SolderPad%200.51-blue.svg)](http://solderpad.org/licenses/SHL-0.51/)
-
 # PsPIN: A RISC-V in-network accelerator for flexible high-performance low-power packet processing
 
 <div align="center"><img src="https://github.com/spcl/pspin/raw/master/overview.svg" alt="PsPIN architecture overview" /></div>
