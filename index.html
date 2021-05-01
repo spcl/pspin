@@ -9,19 +9,19 @@
       
       
       
-      <link rel="icon" href="/assets/images/favicon.png">
+      <link rel="icon" href="assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-7.1.3">
     
     
       
-        <title>PsPIN documentation</title>
+        <title>PsPIN</title>
       
     
     
-      <link rel="stylesheet" href="/assets/stylesheets/main.e35208c4.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.e35208c4.min.css">
       
         
-        <link rel="stylesheet" href="/assets/stylesheets/palette.ef6f36e2.min.css">
+        <link rel="stylesheet" href="assets/stylesheets/palette.ef6f36e2.min.css">
         
       
     
@@ -51,12 +51,17 @@
     <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
   
     
-    <script>function __prefix(e){return new URL("/",location).pathname+"."+e}function __get(e,t=localStorage){return JSON.parse(t.getItem(__prefix(e)))}</script>
+    <script>function __prefix(e){return new URL(".",location).pathname+"."+e}function __get(e,t=localStorage){return JSON.parse(t.getItem(__prefix(e)))}</script>
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
+      
+        
+        <a href="#dependencies" class="md-skip">
+          Skip to content
+        </a>
       
     </div>
     <div data-md-component="announce">
@@ -65,7 +70,7 @@
     
       <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="/." title="PsPIN documentation" class="md-header__button md-logo" aria-label="PsPIN documentation" data-md-component="logo">
+    <a href="." title="PsPIN" class="md-header__button md-logo" aria-label="PsPIN" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
@@ -78,13 +83,13 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            PsPIN documentation
+            PsPIN
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              
+              Home
             
           </span>
         </div>
@@ -158,13 +163,13 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="/." title="PsPIN documentation" class="md-nav__button md-logo" aria-label="PsPIN documentation" data-md-component="logo">
+    <a href="." title="PsPIN" class="md-nav__button md-logo" aria-label="PsPIN" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
 
     </a>
-    PsPIN documentation
+    PsPIN
   </label>
   
     <div class="md-nav__source">
@@ -188,11 +193,61 @@
 
   
   
+    
   
-    <li class="md-nav__item">
-      <a href="/." class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Home
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="." class="md-nav__link md-nav__link--active">
         Home
       </a>
+      
+        
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    Dependencies
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#citation" class="md-nav__link">
+    Citation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    References
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -226,7 +281,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/docker.md" class="md-nav__link">
+      <a href="docker.md" class="md-nav__link">
         Docker image
       </a>
     </li>
@@ -238,7 +293,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/compile.md" class="md-nav__link">
+      <a href="compile.md" class="md-nav__link">
         Manual installation
       </a>
     </li>
@@ -250,7 +305,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/examples.md" class="md-nav__link">
+      <a href="examples.md" class="md-nav__link">
         Running examples
       </a>
     </li>
@@ -292,7 +347,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/handlers_minimal.md" class="md-nav__link">
+      <a href="handlers_minimal.md" class="md-nav__link">
         Minimal handler
       </a>
     </li>
@@ -304,7 +359,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/api.md" class="md-nav__link">
+      <a href="api.md" class="md-nav__link">
         sPIN API
       </a>
     </li>
@@ -316,7 +371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/sim_driver.md" class="md-nav__link">
+      <a href="sim_driver.md" class="md-nav__link">
         Simulation driver
       </a>
     </li>
@@ -336,11 +391,106 @@
               </div>
             
             
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    Dependencies
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#citation" class="md-nav__link">
+    Citation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    References
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
           
           <div class="md-content" data-md-component="content">
             <article class="md-content__inner md-typeset">
               
-  <h1>404 - Not found</h1>
+                
+                  <a href="https://github.com/spcl/pspin/edit/master/docs/index.md" title="Edit this page" class="md-content__button md-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+                  </a>
+                
+                
+                  <h1>Home</h1>
+                
+                <div align="center"><img src="overview.svg" alt="PsPIN architecture overview" /></div>
+
+<p>PsPIN [1] is an implementation of the sPIN programming model [2] based on PULP [3]. This repository includes the RTL code implementing PsPIN, the runtime software, and a set of examples to get started. We provide a toolchain that allows to define, build, and test new handlers through cycle-accurate simulations. </p>
+<p><strong>Workflow summary:</strong> The RTL code is verilated into C++ modules that are compiled together with the functional models into two libraries: <code>libpspin.so</code> and <code>libpspin_debug.so</code>. To write your own handler, you need to define the handler code and a simulation driver. The handler code must be compiled with RISC-V GCC (link here). The simulation driver interfaces to <code>libpspin.so</code> for (1) initializing the simulation; (2) defining the content of L2 handler memory; (3) defining the handlers to offload; (4) defining and injecting packets to process; (5) handle events generated by the execution of the handlers (e.g., packets being sent or writes/reads to/from host memory). By linking against <code>libpspin_debug.so</code> you make the simulation a <code>waves.vcd</code> that can be explored with any value-change-dump editor (e.g., GTKWave http://gtkwave.sourceforge.net/).</p>
+<p><strong>Repo organization:</strong> The repositority has the following structure:</p>
+<ul>
+<li><code>hw/</code>: Hardware components and simulation logic.</li>
+<li><code>hw/deps/</code>: (RTL) Dependencies from the PULP platform (https://github.com/pulp-platform). Some of them have been adapted to fit in the PsPIN design. <strong>License:</strong> SolderPad 0.51.</li>
+<li><code>hw/src/</code>: (RTL) PsPIN components. <strong>License:</strong> SolderPad 0.51.</li>
+<li><code>hw/verilator_model/</code>: (functional) Components implementing the NIC model shown by the above figure. <strong>License:</strong> Apache 2.0.</li>
+<li><code>sw/</code>: Software components. <strong>License:</strong> Apache 2.0.</li>
+<li><code>sw/pulp-sdk/</code>: Dependencies from the PULP SDK adapted to fit the PsPIN design. </li>
+<li><code>sw/rules/</code>: Makefile rules used to ease simulutions setups and runs. </li>
+<li><code>sw/runtime/</code>: HPUs runtime code and support functions for the handlers. </li>
+<li><code>sw/script/</code>: utilities for extracting data from the simulation output. </li>
+<li><code>examples/</code>: Examples of sPIN handlers. <strong>License:</strong> Apache 2.0.<ul>
+<li><code>examples/*/driver/</code>. Simulation driver.</li>
+<li><code>examples/*/handlers/</code>. Handlers code.</li>
+</ul>
+</li>
+</ul>
+<h2 id="dependencies">Dependencies</h2>
+<ul>
+<li>Verilator &gt;= v4.108 (https://www.veripool.org/wiki/verilator)</li>
+<li>RISC-V GCC toolchain (source: https://github.com/pulp-platform/pulp-riscv-gnu-toolchain; prebuilt: <a href="http://spclstorage.inf.ethz.ch/~digirols/pspin/riscv-gcc-ubuntu.tar.gz">Ubuntu-x86-64</a>)</li>
+</ul>
+<h2 id="citation">Citation</h2>
+<p>Please include this citation if you use this work as part of your project:</p>
+<pre><code>@inproceedings{pspin,
+    title={A RISC-V in-network accelerator for flexible high-performance low-power packet processing},
+    author={Di Girolamo, Salvatore and Kurth, Andreas and Calotoiu, Alexandru and Benz, Thomas and Schneider, Timo and Beranek, Jakub and Benini, Luca and Hoefler, Torsten},
+    booktitle={2021 ACM/IEEE 48th Annual International Symposium on Computer Architecture (ISCA)},
+    year={2021}
+}
+</code></pre>
+<h2 id="references">References</h2>
+<p>[1] Di Girolamo Salvatore, Kurth Andreas, Calotoiu Alexandru, Benz Thomas, Schneider Timo, Beranek Jakub, Benini Luca, Hoefler Torsten. "A RISC-V in-network accelerator for flexible high-performance low-power packet processing." 2021 ACM/IEEE 48th Annual International Symposium on Computer Architecture (ISCA). IEEE, 2021. </p>
+<p>[2] Hoefler Torsten, Salvatore Di Girolamo, Konstantin Taranov, Ryan E. Grant, and Ron Brightwell. "sPIN: High-performance streaming Processing in the Network." In Proceedings of the International Conference for High Performance Computing, Networking, Storage and Analysis, pp. 1-16. 2017.</p>
+<p>[3] Rossi, Davide, Francesco Conti, Andrea Marongiu, Antonio Pullini, Igor Loi, Michael Gautschi, Giuseppe Tagliavini, Alessandro Capotondi, Philippe Flatresse, and Luca Benini. "PULP: A parallel ultra low power platform for next generation IoT applications." In 2015 IEEE Hot Chips 27 Symposium (HCS), pp. 1-39. IEEE, 2015.</p>
+                
+              
+              
+                
+
 
               
             </article>
@@ -371,10 +521,10 @@
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "/", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}, "search": "/assets/javascripts/workers/search.fe42c31b.min.js", "version": null}</script>
+    <script id="__config" type="application/json">{"base": ".", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}, "search": "assets/javascripts/workers/search.fe42c31b.min.js", "version": null}</script>
     
     
-      <script src="/assets/javascripts/bundle.4ea5477f.min.js"></script>
+      <script src="assets/javascripts/bundle.4ea5477f.min.js"></script>
       
     
   </body>
