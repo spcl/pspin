@@ -2,7 +2,7 @@
 
 Verilating the hardware is needed whenever you want test new hardware changes that are not available in the relased packeges. The verilation process can take quite long time (20-30 minutes on a Xeon X7550) and can require up to 16 GB of memory. Consider to use the prebuilt libraries if they fit your use case. 
 
-### Requirements:
+### Requirements
 Verilator >= 4.108
 
 ### Clone the repository
