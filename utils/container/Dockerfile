@@ -30,7 +30,7 @@ RUN echo 'deb http://download.opensuse.org/repositories/home:/phiwag:/edatools/x
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/*
 
 # Get RISCV-GCC toolchain
-RUN wget spclstorage.inf.ethz.ch/~digirols/pspin/riscv-gcc-ubuntu.tar.gz && \
+RUN wget spclstorage.inf.ethz.ch/~digirols/pspin/riscv-gcc-ubuntu.tar.gz > /dev/null && \
     tar -xvf /tools/riscv-gcc-ubuntu.tar.gz -C /tools && \
     chmod 777 -R /tools/riscv-gcc/ && \
     rm /tools/riscv-gcc-ubuntu.tar.gz
