@@ -16,6 +16,8 @@ FROM ubuntu:18.04 as build-hw
 WORKDIR /tools
 ARG VERILATOR_VERSION=4.108
 
+SHELL ["/bin/bash", "-c"]
+
 RUN apt-get update --assume-yes && \
     apt-get install --assume-yes \
     wget curl gnupg gnupg2 git build-essential python gengetopt
@@ -41,7 +43,7 @@ RUN git clone https://github.com/spcl/pspin.git && \
     cat sourceme-template.sh | \ 
     sed "s%RISCV_GCC=%RISCV_GCC=/tools/riscv-gcc/bin/%g" | \
     sed "s%PSPIN_HW=%PSPIN_HW=/home/pspin/hw/%g" | \
-    sed "s%PSPIN_RT=%PSPIN_RT=/home/pspin/sw%g" > sourceme.sh && \
+    sed "s%PSPIN_RT=%PSPIN_RT=/home/pspin/sw%g" > sourceme.sh
     
 # Verilate
 RUN export VERILATOR_HOME=/usr/share/verilator/ && \
