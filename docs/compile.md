@@ -12,7 +12,12 @@ git clone https://github.com/spcl/pspin
 ```
 
 ### Setting up the environment 
- Copy the `sourceme-template.sh` file to `sourceme.sh` and update the following variables:
+ Copy the `sourceme-template.sh` file to `sourceme.sh`:
+ ```bash
+ cp sourceme-template.sh sourceme.sh
+ ```
+ 
+Update the following variables:
 
 ```bash
 export RISCV_GCC=<path to the RISC-V GCC toolchain binaries, e.g., /home/salvo/riscv-gcc/bin/>
