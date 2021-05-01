@@ -475,15 +475,16 @@
 <pre><code class="language-bash">git clone https://github.com/spcl/pspin
 </code></pre>
 <h3 id="setting-up-the-environment">Setting up the environment</h3>
-<p>Copy the <code>sourceme-template.sh</code> file to <code>sourceme.sh</code> and update the following variables:</p>
-<p>```bash
-export RISCV_GCC=<path to the RISC-V GCC toolchain binaries, e.g., /home/salvo/riscv-gcc/bin/>
-export PSPIN_HW=<path to the hw, e.g., /home/salvo/pspin/hw/>
-export PSPIN_RT=<path to the sw, e.g., /home/salvo/pspin/sw/></p>
-<pre><code>
-**Source this file every time you want to run simulations!**
-```bash 
-source sourceme.sh
+<p>Copy the <code>sourceme-template.sh</code> file to <code>sourceme.sh</code>:
+ <code>bash
+ cp sourceme-template.sh sourceme.sh</code></p>
+<p>Update the following variables:</p>
+<pre><code class="language-bash">export RISCV_GCC=&lt;path to the RISC-V GCC toolchain binaries, e.g., /home/salvo/riscv-gcc/bin/&gt;
+export PSPIN_HW=&lt;path to the hw, e.g., /home/salvo/pspin/hw/&gt;
+export PSPIN_RT=&lt;path to the sw, e.g., /home/salvo/pspin/sw/&gt;
+</code></pre>
+<p><strong>Source this file every time you want to run simulations!</strong></p>
+<pre><code class="language-bash">source sourceme.sh
 </code></pre>
 <h3 id="verilate-the-hardware">Verilate the hardware</h3>
 <p>Define <code>VERILATOR_HOME</code>:</p>
