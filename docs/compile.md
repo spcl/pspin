@@ -25,14 +25,14 @@ export PSPIN_RT=<path to the sw, e.g., /home/salvo/pspin/sw/>
 source sourceme.sh
 ```
 
-### 3) Verilate the hardware
+### Verilate the hardware
 
 Define `VERILATOR_HOME`:
 ```bash
 export VERILATOR_HOME=<path to verilator installation>
 ```
 
-Compile ```libpspin```:
+Compile `libpspin`:
 ```bash
 cd hw/verilator_model/
 
