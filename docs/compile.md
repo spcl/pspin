@@ -5,19 +5,34 @@ Verilating the hardware is needed whenever you want test new hardware changes th
 ### Requirements:
 Verilator >= 4.108
 
-### 1) Clone the repository
+### Clone the repository
 
 ```bash
 git clone https://github.com/spcl/pspin
 ```
 
-### 2) Define `VERILATOR_HOME`
+### Setting up the environment 
+ Copy the `sourceme-template.sh` file to `sourceme.sh` and update the following variables:
+
+ ```bash
+export RISCV_GCC=<path to the RISC-V GCC toolchain binaries, e.g., /home/salvo/riscv-gcc/bin/>
+export PSPIN_HW=<path to the hw, e.g., /home/salvo/pspin/hw/>
+export PSPIN_RT=<path to the sw, e.g., /home/salvo/pspin/sw/>
+```
+
+**Source this file every time you want to run simulations!**
+```bash 
+source sourceme.sh
+```
+
+### 3) Verilate the hardware
+
+Define `VERILATOR_HOME`:
 ```bash
 export VERILATOR_HOME=<path to verilator installation>
 ```
 
-### 3) Verilate
-
+Compile ```libpspin```:
 ```bash
 cd hw/verilator_model/
 

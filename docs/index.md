@@ -1,6 +1,6 @@
 # PsPIN: A RISC-V in-network accelerator for flexible high-performance low-power packet processing
 
-<div align="center"><img src="https://github.com/spcl/pspin/raw/master/overview.svg" alt="PsPIN architecture overview" /></div>
+<div align="center"><img src="https://github.com/spcl/pspin/raw/master/docs/overview.svg" alt="PsPIN architecture overview" /></div>
 
 
 PsPIN [1] is an implementation of the sPIN programming model [2] based on PULP [3]. This repository includes the RTL code implementing PsPIN, the runtime software, and a set of examples to get started. We provide a toolchain that allows to define, build, and test new handlers through cycle-accurate simulations. 
