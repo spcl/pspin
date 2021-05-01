@@ -13,6 +13,7 @@ git clone https://github.com/spcl/pspin
 
 ### Setting up the environment 
  Copy the `sourceme-template.sh` file to `sourceme.sh`:
+ 
  ```bash
  cp sourceme-template.sh sourceme.sh
  ```
