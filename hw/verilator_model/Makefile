@@ -5,11 +5,11 @@ TOP_MODULE=pspin_verilator
 SIM_LIB_SRCS=src/pspinsim.cpp
 
 CXX ?= g++
-CXX_J ?= 8
+VERILATOR_COMPILER_WORKERS ?= 8
 
 TRACE_DEPTH?=6
-VFLAGS_RELEASE=--Mdir obj_dir_release --sv -Wno-UNOPTFLAT -Wno-NOLATCH -Wno-WIDTHCONCAT -j $(CXX_J) +systemverilogext+sv -Wno-lint -CFLAGS "-fPIC" --compiler $(CXX)
-VFLAGS_DEBUG=--Mdir obj_dir_debug --sv --assert --trace --trace-structs --trace-depth $(TRACE_DEPTH) -CFLAGS "-DVERILATOR_HAS_TRACE -fPIC" -Wno-UNOPTFLAT -Wno-NOLATCH -Wno-WIDTHCONCAT -j $(CXX_J) +systemverilogext+sv -Wno-lint --compiler $(CXX)
+VFLAGS_RELEASE=--Mdir obj_dir_release --sv -Wno-UNOPTFLAT -Wno-NOLATCH -Wno-WIDTHCONCAT -j $(VERILATOR_COMPILER_WORKERS) +systemverilogext+sv -Wno-lint -CFLAGS "-fPIC"
+VFLAGS_DEBUG=--Mdir obj_dir_debug --sv --assert --trace --trace-structs --trace-depth $(TRACE_DEPTH) -CFLAGS "-DVERILATOR_HAS_TRACE -fPIC" -Wno-UNOPTFLAT -Wno-NOLATCH -Wno-WIDTHCONCAT -j $(VERILATOR_COMPILER_WORKERS) +systemverilogext+sv -Wno-lint
 
 
 LIB_RELEASE_FLAGS=-fPIC --std=c++11 -Os -shared -Iobj_dir_release -I$(VERILATOR_HOME)/include -I$(VERILATOR_HOME)/include/vltstd/ -Iinclude/ 
