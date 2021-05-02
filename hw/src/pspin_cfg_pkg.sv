@@ -21,18 +21,8 @@ package automatic pspin_cfg_pkg;
   localparam int unsigned       AXI_IW                  = 6;
   localparam int unsigned       AXI_UW                  = pulp_cluster_cfg_pkg::AXI_UW;
 
-  localparam int unsigned       PKT_MEM_SIZE            = pulp_cluster_cfg_pkg::L2_SIZE / 2;
-  localparam int unsigned       HND_MEM_SIZE            = pulp_cluster_cfg_pkg::L2_SIZE / 2;
-
   localparam int unsigned       SOC_DMA_AXI_REQ_DEPTH   = 12;
   localparam int unsigned       SOC_DMA_REQ_FIFO_DEPT   = 64; //tune me!
-
-  /*
-  localparam longint unsigned   PCIE_START_ADDR         = 64'h1000_0000_0000_0000;
-  localparam longint unsigned   PCIE_END_ADDR           = 64'h1FFF_FFFF_FFFF_FFFF;
-  localparam int unsigned       NHI_START_ADDR          = 32'h1000_0000;
-  localparam int unsigned       NHI_END_ADDR            = 32'hFF00_0000;
-  */
 
   localparam int unsigned       C_SIZE_WIDTH            = AXI_AW;
   localparam int unsigned       C_MSGID_WIDTH           = 10;
@@ -42,7 +32,7 @@ package automatic pspin_cfg_pkg;
   localparam int unsigned       NUM_CORES               = 8;
 
   //MPQ engine
-  localparam int unsigned       NUM_MPQ                 = 1024;
+  localparam int unsigned       NUM_MPQ                 = 256;
   localparam int unsigned       NUM_MPQ_CELLS           = 128;
   localparam int unsigned       NUM_MPQ_STATIC_CELLS    = 1; //per MPQ
 
@@ -85,6 +75,20 @@ package automatic pspin_cfg_pkg;
   localparam int unsigned CMD_NIC_OUTBOUND_ID         = 1;
   localparam int unsigned CMD_EDMA_ID                 = 2;
 
+  // L2 program memory
+  localparam int unsigned MEM_PROG_SIZE               = 32*1024;
+
+  // L2 packet buffer
+  localparam int unsigned MEM_PKT_SIZE                = 4*1024*1024;
+  localparam int unsigned MEM_PKT_N_PAR_CUTS          = 32;
+  localparam int unsigned MEM_PKT_CUT_N_WORDS         = 2048;
+  localparam int unsigned MEM_PKT_CUT_DW              = 512;
+
+  // L2 handler memory
+  localparam int unsigned MEM_HND_SIZE                = 4*1024*1024;
+  localparam int unsigned MEM_HND_N_PAR_CUTS          = 32;
+  localparam int unsigned MEM_HND_CUT_N_WORDS         = 16384;
+  localparam int unsigned MEM_HND_CUT_DW              = 64;
 
   // Interface types
   typedef logic [AXI_AW-1:0]         addr_t;

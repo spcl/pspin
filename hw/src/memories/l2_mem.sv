@@ -20,7 +20,7 @@ module l2_mem #(
   // Cuts
   parameter int unsigned  CUT_DW = 64,  // [bit], must be a power of 2 and >=8
   parameter int unsigned  CUT_N_WORDS = 16384,  // must be a power of 2
-  parameter int unsigned  N_PAR_CUTS_MUL = 4
+  parameter int unsigned  N_PAR_CUTS = AXI_DW / CUT_DW
 ) (
   input  logic  clk_i,
   input  logic  rst_ni,
@@ -34,7 +34,7 @@ module l2_mem #(
   localparam int unsigned CUT_N_BITS = CUT_DW * CUT_N_WORDS;
 
   // Derived properties of memory array
-  localparam int unsigned N_PAR_CUTS = N_PAR_CUTS_MUL * AXI_DW / CUT_DW;
+  //localparam int unsigned N_PAR_CUTS = N_PAR_CUTS_MUL * AXI_DW / CUT_DW;
   localparam int unsigned PAR_CUTS_N_BYTES = N_PAR_CUTS * CUT_N_BITS / 8;
   localparam int unsigned N_SER_CUTS = N_BYTES / PAR_CUTS_N_BYTES;
 
@@ -188,6 +188,7 @@ module l2_mem #(
     assert (AXI_DW >= CUT_DW);
     assert (CUT_N_WORDS % 2**$clog2(CUT_N_WORDS) == 0);
     assert (N_BYTES % PAR_CUTS_N_BYTES == 0);
+    assert (N_PAR_CUTS >= AXI_DW/CUT_DW);
   end
   // pragma translate_on
 

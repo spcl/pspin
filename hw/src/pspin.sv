@@ -74,8 +74,6 @@ module pspin #(
   import pspin_cfg_pkg::resp_t;
   import pspin_cfg_pkg::host_req_t;
   import pspin_cfg_pkg::host_resp_t;
-  import pspin_cfg_pkg::PKT_MEM_SIZE;
-  import pspin_cfg_pkg::HND_MEM_SIZE;
   import pspin_cfg_pkg::L1_CLUSTER_BASE;
   import pspin_cfg_pkg::L1_CLUSTER_MEM_SIZE;
   localparam int unsigned L2_SIZE = pulp_cluster_cfg_pkg::L2_SIZE;
@@ -592,10 +590,10 @@ module pspin #(
           l2_prog_start_addr, l2_prog_end_addr,
           l2_start_addr,      l2_end_addr;
   assign l2_hnd_start_addr  = 32'h1C00_0000;
-  assign l2_hnd_end_addr    = l2_hnd_start_addr + addr_t'(HND_MEM_SIZE);
+  assign l2_hnd_end_addr    = l2_hnd_start_addr + addr_t'(pspin_cfg_pkg::MEM_HND_SIZE);
 
   assign l2_pkt_start_addr  = l2_hnd_end_addr;
-  assign l2_pkt_end_addr    = l2_pkt_start_addr + addr_t'(PKT_MEM_SIZE);
+  assign l2_pkt_end_addr    = l2_pkt_start_addr + addr_t'(pspin_cfg_pkg::MEM_PKT_SIZE);
   
   assign l2_prog_start_addr = 32'h1D00_0000;
   assign l2_prog_end_addr   = l2_prog_start_addr + 32'h0000_8000;
@@ -610,7 +608,7 @@ module pspin #(
 
   prog_mem #(
     .NumClusters  (N_CLUSTERS),
-    .NumBytes     (32*1024),
+    .NumBytes     (pspin_cfg_pkg::MEM_PROG_SIZE),
     .AddrWidth    (AXI_AW),
     .DataWidth    (pulp_cluster_cfg_pkg::AXI_DW_ICACHE),
     .IdWidth      (pulp_cluster_cfg_pkg::AXI_IW_ICACHE),
@@ -814,15 +812,15 @@ module pspin #(
     .AXI_DW         (AXI_WIDE_DW),
     .AXI_UW         (AXI_UW),
     .AXI_IW         (AXI_IW),
-    .N_BYTES        (HND_MEM_SIZE),
-    .CUT_DW         (64),
-    .CUT_N_WORDS    (16384),
-    .N_PAR_CUTS_MUL (4)
+    .N_BYTES        (pspin_cfg_pkg::MEM_HND_SIZE),
+    .CUT_DW         (pspin_cfg_pkg::MEM_HND_CUT_DW),
+    .CUT_N_WORDS    (pspin_cfg_pkg::MEM_HND_CUT_N_WORDS),
+    .N_PAR_CUTS     (pspin_cfg_pkg::MEM_HND_N_PAR_CUTS)
   ) i_l2_hnd_mem (
     .clk_i,
     .rst_ni,
-    .slv_a    (l2_hnd_mst_wo_atomics),
-    .slv_b    (l2_hnd_mst_b)
+    .slv_a          (l2_hnd_mst_wo_atomics),
+    .slv_b          (l2_hnd_mst_b)
   );
 
   l2_mem #(
@@ -830,15 +828,15 @@ module pspin #(
     .AXI_DW         (AXI_WIDE_DW),
     .AXI_UW         (AXI_UW),
     .AXI_IW         (AXI_IW),
-    .N_BYTES        (PKT_MEM_SIZE),
-    .CUT_DW         (512),
-    .CUT_N_WORDS    (2048),
-    .N_PAR_CUTS_MUL (32)
+    .N_BYTES        (pspin_cfg_pkg::MEM_PKT_SIZE),
+    .CUT_DW         (pspin_cfg_pkg::MEM_PKT_CUT_DW),
+    .CUT_N_WORDS    (pspin_cfg_pkg::MEM_PKT_CUT_N_WORDS),
+    .N_PAR_CUTS     (pspin_cfg_pkg::MEM_PKT_N_PAR_CUTS)
   ) i_l2_pkt_mem (
     .clk_i,
     .rst_ni,
-    .slv_a    (l2_pkt_mst_a),
-    .slv_b    (l2_pkt_mst_b)
+    .slv_a          (l2_pkt_mst_a),
+    .slv_b          (l2_pkt_mst_b)
   );
 
   soc_peripherals #(
