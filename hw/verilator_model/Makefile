@@ -12,8 +12,8 @@ VFLAGS_RELEASE=--Mdir obj_dir_release --sv -Wno-UNOPTFLAT -Wno-NOLATCH -Wno-WIDT
 VFLAGS_DEBUG=--Mdir obj_dir_debug --sv --assert --trace --trace-structs --trace-depth $(TRACE_DEPTH) -CFLAGS "-DVERILATOR_HAS_TRACE -fPIC" -Wno-UNOPTFLAT -Wno-NOLATCH -Wno-WIDTHCONCAT -j $(VERILATOR_COMPILER_WORKERS) +systemverilogext+sv -Wno-lint
 
 
-LIB_RELEASE_FLAGS=-fPIC --std=c++11 -Os -shared -Iobj_dir_release -I$(VERILATOR_HOME)/include -I$(VERILATOR_HOME)/include/vltstd/ -Iinclude/ 
-LIB_DEBUG_FLAGS=-fPIC -g --std=c++11 -Os -shared -Iobj_dir_debug -I$(VERILATOR_HOME)/include -I$(VERILATOR_HOME)/include/vltstd/ -Iinclude/ -DVERILATOR_HAS_TRACE
+LIB_RELEASE_FLAGS=-fPIC --std=c++11 -Os -shared -Iobj_dir_release -I$(VERILATOR_ROOT)/include -I$(VERILATOR_ROOT)/include/vltstd/ -Iinclude/ 
+LIB_DEBUG_FLAGS=-fPIC -g --std=c++11 -Os -shared -Iobj_dir_debug -I$(VERILATOR_ROOT)/include -I$(VERILATOR_ROOT)/include/vltstd/ -Iinclude/ -DVERILATOR_HAS_TRACE
 
 EXE_RELEASE_FLAGS=-Iinclude/
 EXE_DEBUG_FLAGS=-Iinclude/ -DVERILATOR_HAS_TRACE
@@ -239,12 +239,12 @@ SV_SRCS=../deps/axi/src/axi_pkg.sv \
 debug:
 	$(VERILATOR_CC) $(VFLAGS_DEBUG) $(SV_INC) -cc $(SV_SRCS) --top-module $(TOP_MODULE) --build $(SIM_LIB_SRCS) -o pspin
 	@mkdir -p lib/
-	$(CXX) $(LIB_DEBUG_FLAGS) -o lib/libpspin_debug.so $(SIM_LIB_SRCS) obj_dir_debug/Vpspin_verilator__ALL.a $(VERILATOR_HOME)/include/verilated.cpp $(VERILATOR_HOME)/include/verilated_vcd_c.cpp
+	$(CXX) $(LIB_DEBUG_FLAGS) -o lib/libpspin_debug.so $(SIM_LIB_SRCS) obj_dir_debug/Vpspin_verilator__ALL.a $(VERILATOR_ROOT)/include/verilated.cpp $(VERILATOR_ROOT)/include/verilated_vcd_c.cpp
 
 release:
 	$(VERILATOR_CC) $(VFLAGS_RELEASE) $(SV_INC) -cc $(SV_SRCS) --top-module $(TOP_MODULE) --build $(SIM_LIB_SRCS) -o pspin
 	@mkdir -p lib/
-	$(CXX) $(LIB_RELEASE_FLAGS) -o lib/libpspin.so $(SIM_LIB_SRCS) obj_dir_release/Vpspin_verilator__ALL.a $(VERILATOR_HOME)/include/verilated.cpp 
+	$(CXX) $(LIB_RELEASE_FLAGS) -o lib/libpspin.so $(SIM_LIB_SRCS) obj_dir_release/Vpspin_verilator__ALL.a $(VERILATOR_ROOT)/include/verilated.cpp 
 
 clean:
 	@rm -rf obj_dir_debug/ obj_dir_release/ bin/pspin bin/pspin_debug lib/libpspin.so lib/libpspin_debug.so > /dev/null 2> /dev/null

@@ -24,9 +24,9 @@ RUN apt-get update --assume-yes && \
 
 # Get Verilator
 RUN wget http://spclstorage.inf.ethz.ch/~digirols/pspin/verilator-${VERILATOR_VERSION}.tar && \
-    tar -xvf verilator-${VERILATOR_VERSION}.tar && \
-    mv verilator_build verilator/ 
+    tar -xvf verilator-${VERILATOR_VERSION}.tar
 ENV PATH="/tools/verilator/bin/:${PATH}"
+ENV VERILATOR_ROOT="/tools/verilator/"
 
 # Get RISCV-GCC toolchain
 RUN wget spclstorage.inf.ethz.ch/~digirols/pspin/riscv-gcc-ubuntu.tar.gz > /dev/null && \
