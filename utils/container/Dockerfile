@@ -44,11 +44,17 @@ RUN git clone https://github.com/spcl/pspin.git && \
     sed "s%RISCV_GCC=%RISCV_GCC=/tools/riscv-gcc/bin/%g" | \
     sed "s%PSPIN_HW=%PSPIN_HW=/home/pspin/hw/%g" | \
     sed "s%PSPIN_RT=%PSPIN_RT=/home/pspin/sw%g" > sourceme.sh
-    
+
+# Get clang-9
+RUN curl -SL http://releases.llvm.org/9.0.0/clang+llvm-9.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz | tar -xJC . \
+    && mv clang+llvm-9.0.0-x86_64-linux-gnu-ubuntu-18.04 clang_9.0.0
+ENV PATH="/home/clang_9.0.0/bin:/usr/bin/cmake/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/home/clang_9.0.0/lib:${LD_LIBRARY_PATH}"
+  
 # Verilate
 RUN export VERILATOR_HOME=/usr/share/verilator/ && \
     cd pspin/hw/verilator_model/ && \
-    make release
+    VERILATOR_CXX=clang++ VERILATOR_CXX_J=2 make release
 
 # Test
 RUN source pspin/sourceme.sh && \
