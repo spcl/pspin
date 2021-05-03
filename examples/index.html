@@ -303,6 +303,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#debugging" class="md-nav__link">
+    Debugging
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -422,6 +429,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#debugging" class="md-nav__link">
+    Debugging
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -480,7 +494,8 @@ PCIe Master:
 </code></pre>
 <p>In particular, it shows for each executed handler, the cluster and core where it has been executed, the starting and ending times (in picoseconds), the duration (in picoseconds), total number of instructions, and number of instructions per instruction class.</p>
 <p>We also provide a tool for quick&amp;raw data visualization: <code>make stats</code> (note: needs gnuplot installed). It works only if you redirected the simulation stdout to a <code>transcript</code> file (e.g., <code>./sim_pingpong &gt; transcript</code>).</p>
-<p><strong>Debugging:</strong> in order to debug the handlers, you can produce a trace of all executed instructions with <code>make trace</code>. The output reports one instruction per line:</p>
+<h3 id="debugging">Debugging</h3>
+<p>In order to debug the handlers, you can produce a trace of all executed instructions with <code>make trace</code>. The output reports one instruction per line:</p>
 <pre><code>1845000 1841 1000 00 1 pingpong_ph 1d0003b2 ping_pong.c:38 lhu &quot;lhu  x12, 2(x14)         x12=00000400 x14:1000bc00  PA:1000bc02&quot;
 </code></pre>
 <p>It reports the following information:
