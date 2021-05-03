@@ -1,24 +1,24 @@
 This is the fastest way to try out PsPIN. The latest PsPIN Docker image is available on the GitHub Container Registry. You can pull and try existing handlers or directly test your own ones. The image also contains the enviroment to verilate the hardware: you can keep using it as development environment if you make changes to the hardware or pull yet unreleased updates.
 
-### Pull the image:
+### Pull the image
 
 ```bash
 docker pull ghcr.io/spcl/pspin:latest
 ```
 
-### Get a shell into the container:
+### Get a shell into the container
 
 ```bash
 docker run -it ghcr.io/spcl/pspin:latest /bin/bash
 ```
 
-### Setup enviroment:
+### Setup enviroment
 
 ```bash
 source pspin/sourceme.sh
 ```
 
-### Run examples:
+### Run examples
 
 ```bash
 cd pspin/examples/pingpong

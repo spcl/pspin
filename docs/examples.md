@@ -52,7 +52,9 @@ In particular, it shows for each executed handler, the cluster and core where it
 
 We also provide a tool for quick&raw data visualization: `make stats` (note: needs gnuplot installed). It works only if you redirected the simulation stdout to a `transcript` file (e.g., `./sim_pingpong > transcript`).
 
-**Debugging:** in order to debug the handlers, you can produce a trace of all executed instructions with `make trace`. The output reports one instruction per line:
+### Debugging 
+
+In order to debug the handlers, you can produce a trace of all executed instructions with `make trace`. The output reports one instruction per line:
 ```
 1845000 1841 1000 00 1 pingpong_ph 1d0003b2 ping_pong.c:38 lhu "lhu  x12, 2(x14)         x12=00000400 x14:1000bc00  PA:1000bc02"
 ```
