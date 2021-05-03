@@ -27,7 +27,7 @@ make driver
 make run
 ```
 
-### Run your own driver
+### Run your own handlers
 Remember that changes made inside the container are not persistent! If you are working on your own handlers and want to test them inside the container, then you need to mount your working directory:
 
 ```bash
