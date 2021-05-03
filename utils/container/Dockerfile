@@ -20,7 +20,7 @@ SHELL ["/bin/bash", "-c"]
 
 RUN apt-get update --assume-yes && \
     apt-get install --assume-yes \
-    wget curl gnupg gnupg2 git build-essential python gengetopt libncurses5
+    wget curl gnupg gnupg2 git build-essential python gengetopt libncurses5 gawk
 
 # Get Verilator
 RUN wget http://spclstorage.inf.ethz.ch/~digirols/pspin/verilator-${VERILATOR_VERSION}.tar && \

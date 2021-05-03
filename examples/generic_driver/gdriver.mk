@@ -20,6 +20,6 @@ clean::
 	-@rm sim_${SPIN_APP_NAME}_debug 2>/dev/null || true
 
 run::
-	./sim_${SPIN_APP_NAME}
+	./sim_${SPIN_APP_NAME} | tee transcript
 
 .PHONY: driver driver_debug clean run
