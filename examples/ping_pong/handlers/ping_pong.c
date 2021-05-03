@@ -62,6 +62,4 @@ void init_handlers(handler_fn * hh, handler_fn *ph, handler_fn *th, void **handl
     *hh = handlers[0];
     *ph = handlers[1];
     *th = handlers[2];
-
-    *handler_mem_ptr = (void*) handler_mem;
 }
