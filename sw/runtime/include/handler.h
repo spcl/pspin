@@ -88,8 +88,14 @@ typedef struct spin_rw_lock {
 
 static inline int spin_dma(void* source, void* dest, size_t size, int direction, int options, spin_dma_t* xfer)
 {
-    *xfer = spin__memcpy_nonblk(source, dest, (uint32_t)size);
-    return SPIN_OK;
+    if (__builtin_expect(size>0, 1))
+    {
+        *xfer = spin__memcpy_nonblk(source, dest, (uint32_t)size);
+        return SPIN_OK;
+    } else
+    {
+        return SPIN_FAIL;  
+    }
 }
 
 static inline int spin_dma_wait(spin_dma_t xfer)
