@@ -192,7 +192,7 @@ module cluster_scheduler #(
 
     assign dma_xfer_d = (state_q == Ready) ? dma_xfer : dma_xfer_q;
     assign dma_xfer_o = (state_q == Ready) ? dma_xfer : dma_xfer_q;
-    assign dma_xfer_valid_o = (state_d == Ready && can_issue_dma) || (state_q == WaitDMA);
+    assign dma_xfer_valid_o = (state_q == Ready && can_issue_dma) || (state_q == WaitDMA);
 
     //we are ready to accept new tasks if
     //  - we are in Ready state AND
