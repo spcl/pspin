@@ -24,7 +24,7 @@ package snitch_cluster_cfg_pkg;
   localparam int unsigned ICacheLineCount [NrHives] = '{ 65536 };
   localparam int unsigned ICacheSets [NrHives] = '{ 4 };
 
-  localparam int unsigned PhysicalAddrWidth = 34;
+  localparam int unsigned PhysicalAddrWidth = pspin_cfg_pkg::AXI_SOC_AW;
   localparam int unsigned BootAddr = 32'h1000;
 
   localparam int unsigned TCDMDepth = 4096;

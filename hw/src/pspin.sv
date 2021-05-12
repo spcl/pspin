@@ -603,22 +603,22 @@ module pspin
     .l2i_req_t            (soc_narrow_req_t),
     .l2i_resp_t           (soc_narrow_resp_t)
   ) i_pe_noc (
-    .clk_i                ( clk_i              ),
-    .rst_ni               ( rst_ni             ),
-    .cl_start_addr_i      ( cl_start_addr      ),
-    .cl_end_addr_i        ( cl_end_addr        ),
-    .l2d_start_addr_i     ( L2D_MIN_ADDR       ),
-    .l2d_end_addr_i       ( L2D_MAX_ADDR       ),
-    .l2i_start_addr_i     ( L2_PROG_ADDR_START ),
-    .l2i_end_addr_i       ( L2_PROG_ADDR_END   ),
-    .from_cl_req_i        ( cl_narrow_out_req  ),
-    .from_cl_resp_o       ( cl_narrow_out_resp ),
-    .to_cl_req_o          ( cl_narrow_in_req   ),
-    .to_cl_resp_i         ( cl_narrow_in_resp  ),
-    .l2d_req_o            ( pe_l2d_req         ),
-    .l2d_resp_i           ( pe_l2d_resp        ),
-    .l2i_req_o            ( pe_l2i_req         ),
-    .l2i_resp_i           ( pe_l2i_resp        )
+    .clk_i                ( clk_i                              ),
+    .rst_ni               ( rst_ni                             ),
+    .cl_start_addr_i      ( cl_start_addr                      ),
+    .cl_end_addr_i        ( cl_end_addr                        ),
+    .l2d_start_addr_i     ( L2D_MIN_ADDR[AXI_SOC_AW-1:0]       ),
+    .l2d_end_addr_i       ( L2D_MAX_ADDR[AXI_SOC_AW-1:0]       ),
+    .l2i_start_addr_i     ( L2_PROG_ADDR_START[AXI_SOC_AW-1:0] ),
+    .l2i_end_addr_i       ( L2_PROG_ADDR_END[AXI_SOC_AW-1:0]   ),
+    .from_cl_req_i        ( cl_narrow_out_req                  ),
+    .from_cl_resp_o       ( cl_narrow_out_resp                 ),
+    .to_cl_req_o          ( cl_narrow_in_req                   ),
+    .to_cl_resp_i         ( cl_narrow_in_resp                  ),
+    .l2d_req_o            ( pe_l2d_req                         ),
+    .l2d_resp_i           ( pe_l2d_resp                        ),
+    .l2i_req_o            ( pe_l2i_req                         ),
+    .l2i_resp_i           ( pe_l2i_resp                        )
   );
 
   // Wide accesses from cluster-local DMA engines to L2
@@ -634,14 +634,14 @@ module pspin
     .l2_req_t             (soc_wide_req_t),
     .l2_resp_t            (soc_wide_resp_t)
   ) i_dma_noc (
-    .clk_i                ( clk_i             ),
-    .rst_ni               ( rst_ni            ),
-    .l2_start_addr_i      ( L2D_MIN_ADDR      ),
-    .l2_end_addr_i        ( L2D_MAX_ADDR      ),
-    .dma_req_i            ( cl_wide_out_req   ),
-    .dma_resp_o           ( cl_wide_out_resp  ),
-    .l2_req_o             ( dma_l2_req        ),
-    .l2_resp_i            ( dma_l2_resp       )
+    .clk_i                ( clk_i                        ),
+    .rst_ni               ( rst_ni                       ),
+    .l2_start_addr_i      ( L2D_MIN_ADDR[AXI_SOC_AW-1:0] ),
+    .l2_end_addr_i        ( L2D_MAX_ADDR[AXI_SOC_AW-1:0] ),
+    .dma_req_i            ( cl_wide_out_req              ),
+    .dma_resp_o           ( cl_wide_out_resp             ),
+    .l2_req_o             ( dma_l2_req                   ),
+    .l2_resp_i            ( dma_l2_resp                  )
   );
 
   // Wide accesses from NHI slave ports to clusters
@@ -678,30 +678,30 @@ module pspin
   ) i_nhi_xbar (
     .clk_i,
     .rst_ni,
-    .l2_hnd_start_addr_i  ( L2_HND_ADDR_START           ),
-    .l2_hnd_end_addr_i    ( L2_HND_ADDR_END             ),
-    .l2_pkt_start_addr_i  ( L2_PKT_ADDR_START           ),
-    .l2_pkt_end_addr_i    ( L2_PKT_ADDR_END             ),
-    .l2_prog_start_addr_i ( L2_PROG_ADDR_START          ),
-    .l2_prog_end_addr_i   ( L2_PROG_ADDR_END            ),
-    .l1_start_addr_i      ( cl_start_addr[0]            ),
-    .l1_end_addr_i        ( cl_end_addr[NUM_CLUSTERS-1] ),
-    .host_req_i           ( host_wide_req_i             ),
-    .host_resp_o          ( host_wide_resp_o            ),
-    .ni_req_i             ( ni_wide_req_i               ),
-    .ni_resp_o            ( ni_wide_resp_o              ),
-    .no_req_i             ( no_wide_req_i               ),
-    .no_resp_o            ( no_wide_resp_o              ),
-    .edma_req_i           ( nhi_mst_edma_req            ),
-    .edma_resp_o          ( nhi_mst_edma_resp           ),
-    .l2_hnd_req_o         ( l2_hnd_req_b                ),
-    .l2_hnd_resp_i        ( l2_hnd_resp_b               ),
-    .l2_pkt_req_o         ( l2_pkt_req_b                ),
-    .l2_pkt_resp_i        ( l2_pkt_resp_b               ),
-    .l2_prog_req_o        ( host_l2_prog_req            ),
-    .l2_prog_resp_i       ( host_l2_prog_resp           ),
-    .cluster_req_o        ( nhi_req                     ),
-    .cluster_resp_i       ( nhi_resp                    )
+    .l2_hnd_start_addr_i  ( L2_HND_ADDR_START[AXI_SOC_AW-1:0]  ),
+    .l2_hnd_end_addr_i    ( L2_HND_ADDR_END[AXI_SOC_AW-1:0]    ),
+    .l2_pkt_start_addr_i  ( L2_PKT_ADDR_START[AXI_SOC_AW-1:0]  ),
+    .l2_pkt_end_addr_i    ( L2_PKT_ADDR_END[AXI_SOC_AW-1:0]    ),
+    .l2_prog_start_addr_i ( L2_PROG_ADDR_START[AXI_SOC_AW-1:0] ),
+    .l2_prog_end_addr_i   ( L2_PROG_ADDR_END[AXI_SOC_AW-1:0]   ),
+    .l1_start_addr_i      ( cl_start_addr[0]                   ),
+    .l1_end_addr_i        ( cl_end_addr[NUM_CLUSTERS-1]        ),
+    .host_req_i           ( host_wide_req_i                    ),
+    .host_resp_o          ( host_wide_resp_o                   ),
+    .ni_req_i             ( ni_wide_req_i                      ),
+    .ni_resp_o            ( ni_wide_resp_o                     ),
+    .no_req_i             ( no_wide_req_i                      ),
+    .no_resp_o            ( no_wide_resp_o                     ),
+    .edma_req_i           ( nhi_mst_edma_req                   ),
+    .edma_resp_o          ( nhi_mst_edma_resp                  ),
+    .l2_hnd_req_o         ( l2_hnd_req_b                       ),
+    .l2_hnd_resp_i        ( l2_hnd_resp_b                      ),
+    .l2_pkt_req_o         ( l2_pkt_req_b                       ),
+    .l2_pkt_resp_i        ( l2_pkt_resp_b                      ),
+    .l2_prog_req_o        ( host_l2_prog_req                   ),
+    .l2_prog_resp_i       ( host_l2_prog_resp                  ),
+    .cluster_req_o        ( nhi_req                            ),
+    .cluster_resp_i       ( nhi_resp                           )
   );
 
   // L2 crossbar 
@@ -715,18 +715,18 @@ module pspin
   ) i_l2_xbar (
     .clk_i,
     .rst_ni,
-    .l2_hnd_start_addr_i  (L2_HND_ADDR_START),
-    .l2_hnd_end_addr_i    (L2_HND_ADDR_END),
-    .l2_pkt_start_addr_i  (L2_PKT_ADDR_START),
-    .l2_pkt_end_addr_i    (L2_PKT_ADDR_END),
-    .pe_req_i             (pe_l2d_req),
-    .pe_resp_o            (pe_l2d_resp),
-    .dma_req_i            (dma_l2_req),
-    .dma_resp_o           (dma_l2_resp),
-    .l2_hnd_req_o         (l2_hnd_req_a),
-    .l2_hnd_resp_i        (l2_hnd_resp_a),
-    .l2_pkt_req_o         (l2_pkt_req_a),
-    .l2_pkt_resp_i        (l2_pkt_resp_a)
+    .l2_hnd_start_addr_i  (L2_HND_ADDR_START[AXI_SOC_AW-1:0] ),
+    .l2_hnd_end_addr_i    (L2_HND_ADDR_END[AXI_SOC_AW-1:0]   ),
+    .l2_pkt_start_addr_i  (L2_PKT_ADDR_START[AXI_SOC_AW-1:0] ),
+    .l2_pkt_end_addr_i    (L2_PKT_ADDR_END[AXI_SOC_AW-1:0]   ),
+    .pe_req_i             (pe_l2d_req                        ),
+    .pe_resp_o            (pe_l2d_resp                       ),
+    .dma_req_i            (dma_l2_req                        ),
+    .dma_resp_o           (dma_l2_resp                       ),
+    .l2_hnd_req_o         (l2_hnd_req_a                      ),
+    .l2_hnd_resp_i        (l2_hnd_resp_a                     ),
+    .l2_pkt_req_o         (l2_pkt_req_a                      ),
+    .l2_pkt_resp_i        (l2_pkt_resp_a                     )
   );
 
 endmodule

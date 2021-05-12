@@ -17,7 +17,7 @@ package automatic pspin_cfg_pkg;
   localparam int unsigned       NUM_CORES                   = 8;    // number of cores per cluster
 
   // AXI
-  localparam int unsigned       AXI_SOC_AW                  = 32;   // [bit]
+  localparam int unsigned       AXI_SOC_AW                  = 48;   // [bit]
   localparam int unsigned       AXI_HOST_AW                 = 64;   // [bit]
   localparam int unsigned       AXI_WIDE_DW                 = 512;  // [bit], must be a power of 2
   localparam int unsigned       AXI_NARROW_DW               = 64;   // [bit], must be a power of 2
@@ -36,7 +36,7 @@ package automatic pspin_cfg_pkg;
   // Constants used for decoding HER info
   localparam int unsigned       C_SIZE_WIDTH                = 32;   
   localparam int unsigned       C_MSGID_WIDTH               = 10;
-  localparam int unsigned       C_ADDR_WIDTH                = AXI_SOC_AW;
+  localparam int unsigned       C_ADDR_WIDTH                = 32;
   localparam int unsigned       C_HOST_ADDR_WIDTH           = AXI_HOST_AW;
 
   // L1 organization
@@ -80,17 +80,17 @@ package automatic pspin_cfg_pkg;
   localparam int unsigned L2_PROG_SIZE       = 32'h0000_8000;
 
   // L2 address map
-  localparam int unsigned L2_HND_ADDR_START  = 32'h1C00_0000;
-  localparam int unsigned L2_HND_ADDR_END    = L2_HND_ADDR_START + L2_HND_SIZE - 1;
+  localparam longint unsigned L2_HND_ADDR_START  = 34'h0_1C00_0000;
+  localparam longint unsigned L2_HND_ADDR_END    = L2_HND_ADDR_START + L2_HND_SIZE - 1;
 
-  localparam int unsigned L2_PKT_ADDR_START  = 32'h1D00_0000;
-  localparam int unsigned L2_PKT_ADDR_END    = L2_PKT_ADDR_START + L2_PKT_SIZE - 1;
+  localparam longint unsigned L2_PKT_ADDR_START  = 34'h0_1D00_0000;
+  localparam longint unsigned L2_PKT_ADDR_END    = L2_PKT_ADDR_START + L2_PKT_SIZE - 1;
   
-  localparam int unsigned L2_PROG_ADDR_START = 32'h1E00_0000;
-  localparam int unsigned L2_PROG_ADDR_END = L2_PROG_ADDR_START + L2_PROG_SIZE - 1;
+  localparam longint unsigned L2_PROG_ADDR_START = 34'h0_1E00_0000;
+  localparam longint unsigned L2_PROG_ADDR_END = L2_PROG_ADDR_START + L2_PROG_SIZE - 1;
 
-  localparam int unsigned L2D_MIN_ADDR = L2_HND_ADDR_START;
-  localparam int unsigned L2D_MAX_ADDR = L2_PKT_ADDR_END;
+  localparam longint unsigned L2D_MIN_ADDR = L2_HND_ADDR_START;
+  localparam longint unsigned L2D_MAX_ADDR = L2_PKT_ADDR_END;
 
   // Interface types
   typedef logic [AXI_SOC_AW-1:0]      addr_t;

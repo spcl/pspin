@@ -178,7 +178,7 @@ module l2_mem #(
   // pragma translate_off
   initial begin
     assert (AXI_AW > 0);
-    assert (AXI_AW % (2**$clog2(AXI_AW)) == 0);
+    //assert (AXI_AW % (2**$clog2(AXI_AW)) == 0);
     assert (AXI_DW > 0);
     assert (AXI_DW % (2**$clog2(AXI_DW)) == 0);
     assert (N_BYTES > 0);
