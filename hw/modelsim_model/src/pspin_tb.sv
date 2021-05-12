@@ -8,7 +8,7 @@ module pspin_tb #();
     timeunit 1ps;
     timeprecision 1ps;
 
-    parameter time                      CLK_PERIOD = 1000ps;
+    localparam time                      CLK_PERIOD = 1ns;
 
     typedef logic [AXI_SOC_AW-1:0]      addr_t;
     typedef logic [AXI_HOST_AW-1:0]     host_addr_t;
@@ -101,6 +101,18 @@ module pspin_tb #();
         .eos_i                  (eos),
         .pspin_active_o         (pspin_active)
     );
+
+    initial begin
+        $display("init!");
+        wait (rst_n);
+        $display("starting!");
+        //wait(dut.i_mpq_engine.mpq_busy == '0 && dut.i_mpq_engine.eos_i && dut.i_mpq_engine.fifo_empty);
+        #1000ns
+        //wait (0);
+        $display("ending!");
+        //print_clusters_stats();
+        $finish(1);
+    end
 
 
 endmodule

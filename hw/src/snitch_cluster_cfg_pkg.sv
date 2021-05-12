@@ -25,7 +25,7 @@ package snitch_cluster_cfg_pkg;
   localparam int unsigned ICacheSets [NrHives] = '{ 4 };
 
   localparam int unsigned PhysicalAddrWidth = pspin_cfg_pkg::AXI_SOC_AW;
-  localparam int unsigned BootAddr = 32'h1000;
+  localparam int unsigned BootAddr = 32'h1e000000;
 
   localparam int unsigned TCDMDepth = 4096;
   localparam int unsigned TCDMBanks = 64;
@@ -90,7 +90,12 @@ package snitch_cluster_cfg_pkg;
   localparam snitch_pma_pkg::snitch_pma_t SnitchPMACfg = '{
       NrCachedRegionRules: 1,
       CachedRegion: '{
-          '{base: 32'h1c000000, mask: 32'h800000}
+          '{base: 32'h1e000000, mask: 32'h800000}
+      },
+
+      NrExecuteRegionRules: 1,
+      ExecuteRegion: '{
+          '{base: 32'h1e000000, mask: 32'h800000}
       },
       default: 0
   };

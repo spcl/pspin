@@ -257,7 +257,7 @@ module pspin
   //*******************//
   // L2 handler memory //
   //*******************//
-  
+
   l2_mem #(
     .AXI_AW         (AXI_SOC_AW),
     .AXI_DW         (AXI_WIDE_DW),
@@ -291,7 +291,7 @@ module pspin
   //******************//
   // L2 packet memory //
   //******************//
-
+  
   l2_mem #(
     .AXI_AW         (AXI_SOC_AW),
     .AXI_DW         (AXI_WIDE_DW),
@@ -307,11 +307,11 @@ module pspin
     .slv_a    (l2_pkt_mst_a),
     .slv_b    (l2_pkt_mst_b)
   );
-
+  
   //**************************//
   // Inter-cluster scheduling //
   //**************************//
-
+  
   mpq_engine #(
     .NUM_HER_SLOTS          (NUM_MPQ_CELLS),
     .NUM_MPQ                (NUM_MPQ) 
@@ -325,7 +325,7 @@ module pspin
 
     .eos_i                  (eos_i),
 
-    .mpq_full_o             ( /* unconnected */),
+    .mpq_full_o             (),
 
     .nic_feedback_ready_i   (nic_feedback_ready_i),
     .nic_feedback_valid_o   (nic_feedback_valid_o),
@@ -368,11 +368,11 @@ module pspin
     .cluster_feedback_ready_o (loc_sched_ready),
     .cluster_feedback_i       (loc_sched_feedback)
   );
-
+  
   //************************************//
   // Command unit (dispatches commands) //
   //************************************//
-
+  
   cmd_unit #(
     .NUM_CLUSTERS                (NUM_CLUSTERS),
     .NUM_CMD_INTERFACES          (NUM_CMD_INTERFACES)
@@ -398,11 +398,11 @@ module pspin
     .intf_cmd_resp_valid_i       ({edma_resp_valid, nic_cmd_resp_valid_i, hdir_resp_valid}),
     .intf_cmd_resp_i             ({edma_resp,       nic_cmd_resp_i,       hdir_resp})
   );
-
+  
   //**********************************************************//
   // SOC DMA engine (receives commands from the command unit) //
   //**********************************************************//
-
+  
   soc_dma_wrap #(
     .DmaAxiIdWidth     (AXI_IW),
     .DmaDataWidth      (AXI_WIDE_DW),
@@ -431,11 +431,11 @@ module pspin
     .host_req_o        (host_mst_soc_dma_req),
     .host_resp_i       (host_mst_soc_dma_resp)
   );
-
+  
   //**********************************************************//
   // Host direct    (receives commands from the command unit) //
   //**********************************************************//
-
+  
   host_direct #(
     .AXI_AW             (AXI_HOST_AW),
     .AXI_DW             (AXI_WIDE_DW),
@@ -464,15 +464,15 @@ module pspin
     .host_req_o         (host_mst_hdir_req),
     .host_resp_i        (host_mst_hdir_resp)
   );
-
+  
   //**********//
   // Clusters //
   //**********//
 
   for (genvar i = 0; i < NUM_CLUSTERS; i++) begin: gen_clusters
-    //logic [5:0] cluster_id;
-    //assign cluster_id = i;
-
+    logic [9:0] hard_base_id;
+    assign hard_base_id = i * (snitch_cluster_cfg_pkg::NrCores);
+  
     snitch_cluster #(
       .PhysicalAddrWidth (snitch_cluster_cfg_pkg::PhysicalAddrWidth),
       .NarrowDataWidth (snitch_cluster_cfg_pkg::NarrowDataWidth),
@@ -544,7 +544,7 @@ module pspin
       .meip_i               ( '0                    ),
       .mtip_i               ( '0                    ),
       .msip_i               ( '0                    ),
-      .hart_base_id_i       ( 10'h0                 ),
+      .hart_base_id_i       ( hard_base_id          ),
       .cluster_base_addr_i  ( cl_start_addr[i]      ),
       .clk_d2_bypass_i      ( 1'b0                  ),
       .narrow_in_req_i      ( cl_narrow_in_req[i]   ),
@@ -556,7 +556,7 @@ module pspin
       .wide_in_req_i        ( cl_wide_in_req[i]     ),
       .wide_in_resp_o       ( cl_wide_in_resp[i]    )
     );
-
+  
   end
 
   //*******************//
@@ -643,7 +643,7 @@ module pspin
     .l2_req_o             ( dma_l2_req                   ),
     .l2_resp_i            ( dma_l2_resp                  )
   );
-
+  
   // Wide accesses from NHI slave ports to clusters
   cluster_noc #(
     .NumClusters  (NUM_CLUSTERS),

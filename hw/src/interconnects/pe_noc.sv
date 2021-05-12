@@ -110,6 +110,7 @@ module pe_noc #(
     addr_t        start_addr;
     addr_t        end_addr;
   } xbar_rule_t;
+  
   xbar_rule_t [NumMstPorts-1:0] xbar_addr_map;
   for (genvar i = 0; i < NumClusters; i++) begin : gen_addr_map
     assign xbar_addr_map[i].idx = unsigned'(i);
