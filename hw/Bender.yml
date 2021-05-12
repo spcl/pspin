@@ -1,0 +1,49 @@
+# Solderpad Hardware License, Version 0.51, see LICENSE for details.
+# SPDX-License-Identifier: SHL-0.51
+package:
+  name: pspin
+  authors:
+  - Salvatore Di Girolamo <digirols@inf.ethz.ch>
+
+dependencies:
+  axi: {path: deps/pulp_platform_axi}
+  common_cells: {path: deps/pulp_platform_common_cells}
+  tech_cells_generic: {path: deps/pulp_platform_tech_cells_generic}
+  axi_riscv_atomics: {path: deps/pulp_platform_axi_riscv_atomics}
+  snitch_cluster: {path: src/snitch_cluster/hw/ip/snitch_cluster}
+
+sources:
+# Level 0:
+ - src/pspin_cfg_pkg.sv
+# Level 1:
+ - src/snitch_cluster_cfg_pkg.sv
+ - src/memories/sram.sv
+ - src/pkt_scheduler/fifo_engine.sv
+ - src/pkt_scheduler/cluster_rb.sv
+ - src/soc_dma/soc_dma.sv
+ - src/cmds/host_direct.sv
+ - src/cmds/cmd_unit.sv
+ - src/cmds/cluster_cmd.sv
+# Level 2:
+ - src/interconnects/cluster_noc.sv
+ - src/interconnects/dma_noc.sv
+ - src/interconnects/host_mst_mux.sv
+ - src/interconnects/l2_xbar.sv
+ - src/interconnects/nhi_xbar.sv
+ - src/interconnects/pe_noc.sv
+ - src/memories/l2_mem.sv
+ - src/memories/prog_mem.sv
+ - src/pkt_scheduler/cluster_scheduler.sv
+ - src/pkt_scheduler/hpu_driver.sv
+ - src/pkt_scheduler/mpq_engine.sv
+ - src/pkt_scheduler/scheduler.sv
+ - src/soc_dma/soc_dma_wrap.sv
+# Level 3:
+ - src/pspin.sv
+
+ - target: simulation
+   files:
+     # Level 0 
+     - modelsim_model/src/clk_rst_gen.sv
+     # Level 1
+     - modelsim_model/src/pspin_tb.sv

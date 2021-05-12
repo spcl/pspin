@@ -39,9 +39,9 @@ module scheduler #(
     input  feedback_descr_t [NUM_CLUSTERS-1:0]  cluster_feedback_i,
 
     //output IF to pktgen for feedbacks
-    output logic                                pktgen_feedback_valid_o,
-    input  logic                                pktgen_feedback_ready_i,
-    output feedback_descr_t                     pktgen_feedback_o 
+    output logic                                feedback_valid_o,
+    input  logic                                feedback_ready_i,
+    output feedback_descr_t                     feedback_o 
     
 );
 
@@ -234,8 +234,8 @@ module scheduler #(
                 $display("%0d INFO TASK %0d %0d", $stime, task_descr_i.msgid, ($stime - start_time));
             end
 
-            if (pktgen_feedback_valid_o && pktgen_feedback_ready_i) begin
-                $display("%0d INFO FEEDBACK %0d %0d", $stime, pktgen_feedback_o.msgid, ($stime - start_time));
+            if (feedback_valid_o && feedback_ready_i) begin
+                $display("%0d INFO FEEDBACK %0d %0d", $stime, feedback_o.msgid, ($stime - start_time));
             end
         end
     end
@@ -261,9 +261,9 @@ module scheduler #(
         .req_i      (cluster_feedback_valid_iq),
         .gnt_o      (cluster_feedback_ready_oq),
         .data_i     (cluster_feedback_iq),
-        .gnt_i      (pktgen_feedback_ready_i),
-        .req_o      (pktgen_feedback_valid_o),
-        .data_o     (pktgen_feedback_o),
+        .gnt_i      (feedback_ready_i),
+        .req_o      (feedback_valid_o),
+        .data_o     (feedback_o),
         .idx_o      ()
     );
 

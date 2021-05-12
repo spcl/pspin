@@ -24,6 +24,7 @@ module l2_mem #(
 ) (
   input  logic  clk_i,
   input  logic  rst_ni,
+  
   AXI_BUS.Slave slv_a,
   AXI_BUS.Slave slv_b
 );
@@ -101,8 +102,7 @@ module l2_mem #(
     .MEM_NUM_BANKS  (N_PAR_CUTS),
     .MEM_ADDR_WIDTH (MEM_ADDR_WIDTH),
     .MEM_DATA_WIDTH (CUT_DW),
-    .MEM_LATENCY    (1),
-    .TOPOLOGY       (tcdm_interconnect_pkg::LIC)
+    .MEM_LATENCY    (1)
   ) i_axi_to_mem_banked (
     .clk_i,
     .rst_ni,
@@ -112,7 +112,7 @@ module l2_mem #(
     .mem_req_o           (mem_req),
     .mem_gnt_i           ({N_PAR_CUTS{1'b1}}),
     .mem_add_o           (mem_addr),
-    .mem_wen_o           (mem_wen),
+    .mem_we_o            (mem_wen),
     .mem_wdata_o         (mem_wdata),
     .mem_be_o            (mem_be),
     .mem_atop_o          (/* unused */),

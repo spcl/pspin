@@ -10,51 +10,69 @@
 
 `include "axi/typedef.svh"
 
-/// On-chip network interconnecting the PEs of all clusters to the L2, the cluster input ports, and
-/// the peripherals.
+/// On-chip network interconnecting the PEs of all clusters to the L2 and the cluster input ports
 module pe_noc #(
   parameter int unsigned NumClusters = 0,
   parameter int unsigned AddrWidth = 0,
+  
+  // Clusters
   parameter int unsigned ClDataWidth = 0,
   parameter int unsigned ClOupIdWidth = 0,
   parameter int unsigned ClInpIdWidth = 0,
-  parameter int unsigned L2DataWidth = 0,
-  parameter int unsigned L2IdWidth = 0,
-  parameter int unsigned PeriphDataWidth = 0,
-  parameter int unsigned PeriphIdWidth = 0,
+
+  // L2 data
+  parameter int unsigned L2DataDataWidth = 0,
+  parameter int unsigned L2DataIdWidth = 0,
+  
+  // L2 prog
+  parameter int unsigned L2ProgDataWidth = 0,
+  parameter int unsigned L2ProgIdWidth = 0,
+  
   parameter int unsigned UserWidth = 0,
+  
   parameter type cl_oup_req_t = logic,
   parameter type cl_oup_resp_t = logic,
   parameter type cl_inp_req_t = logic,
   parameter type cl_inp_resp_t = logic,
-  parameter type l2_req_t = logic,
-  parameter type l2_resp_t = logic,
-  parameter type periph_req_t = logic,
-  parameter type periph_resp_t = logic,
+  parameter type l2d_req_t = logic,
+  parameter type l2d_resp_t = logic,
+  parameter type l2i_req_t = logic,
+  parameter type l2i_resp_t = logic,
+  
   // Dependent parameters, do not override!
   parameter type addr_t = logic [AddrWidth-1:0]
 ) (
   input  logic                            clk_i,
   input  logic                            rst_ni,
 
+  // cluster addresses
   input  addr_t        [NumClusters-1:0]  cl_start_addr_i,
   input  addr_t        [NumClusters-1:0]  cl_end_addr_i,
-  input  addr_t                           l2_start_addr_i,
-  input  addr_t                           l2_end_addr_i,
-  input  addr_t                           periph_start_addr_i,
-  input  addr_t                           periph_end_addr_i,
+  
+  // L2 data (handler + pkt) addresses
+  input  addr_t                           l2d_start_addr_i,
+  input  addr_t                           l2d_end_addr_i,
 
+  // L2 prog addresses
+  input  addr_t                           l2i_start_addr_i,
+  input  addr_t                           l2i_end_addr_i,
+
+  // requests from clusters
   input  cl_oup_req_t  [NumClusters-1:0]  from_cl_req_i,
   output cl_oup_resp_t [NumClusters-1:0]  from_cl_resp_o,
 
+  // requests to clusters
   output cl_inp_req_t  [NumClusters-1:0]  to_cl_req_o,
   input  cl_inp_resp_t [NumClusters-1:0]  to_cl_resp_i,
 
-  output l2_req_t                         l2_req_o,
-  input  l2_resp_t                        l2_resp_i,
+  // requests to L2 data
+  output l2d_req_t                        l2d_req_o,
+  input  l2d_resp_t                       l2d_resp_i,
 
-  output periph_req_t                     periph_req_o,
-  input  periph_resp_t                    periph_resp_i
+  // requests to L2 data
+  output l2i_req_t                        l2i_req_o,
+  input  l2i_resp_t                       l2i_resp_i
+
 );
 
   // Types of ports of clusters.
@@ -93,19 +111,17 @@ module pe_noc #(
     addr_t        end_addr;
   } xbar_rule_t;
   xbar_rule_t [NumMstPorts-1:0] xbar_addr_map;
-  for (genvar i = 0; i < NumMstPorts; i++) begin : gen_addr_map
+  for (genvar i = 0; i < NumClusters; i++) begin : gen_addr_map
     assign xbar_addr_map[i].idx = unsigned'(i);
-    if (i < NumClusters) begin : gen_map_cluster
-      assign xbar_addr_map[i].start_addr = cl_start_addr_i[i];
-      assign xbar_addr_map[i].end_addr = cl_end_addr_i[i];
-    end else if (i == NumClusters) begin : gen_map_l2
-      assign xbar_addr_map[i].start_addr = l2_start_addr_i;
-      assign xbar_addr_map[i].end_addr = l2_end_addr_i;
-    end else begin : gen_map_periph
-      assign xbar_addr_map[i].start_addr = periph_start_addr_i;
-      assign xbar_addr_map[i].end_addr = periph_end_addr_i;
-    end
+    assign xbar_addr_map[i].start_addr = cl_start_addr_i[i];
+    assign xbar_addr_map[i].end_addr = cl_end_addr_i[i];
   end
+
+  assign xbar_addr_map[NumClusters].start_addr = l2d_start_addr_i;
+  assign xbar_addr_map[NumClusters].end_addr = l2d_end_addr_i;
+
+  assign xbar_addr_map[NumClusters + 1].start_addr = l2i_start_addr_i;
+  assign xbar_addr_map[NumClusters + 1].end_addr = l2i_end_addr_i;
 
   // Configuration and instantiation of crossbar.
   /* verilator lint_off WIDTHCONCAT */
@@ -174,122 +190,123 @@ module pe_noc #(
     );
   end
 
-  // ID width converter towards L2.
-  typedef logic [L2IdWidth-1:0] l2_id_t;
-  `AXI_TYPEDEF_AW_CHAN_T(l2_aw_t, addr_t, l2_id_t, user_t)
-  `AXI_TYPEDEF_B_CHAN_T(l2_b_t, l2_id_t, user_t)
-  `AXI_TYPEDEF_AR_CHAN_T(l2_ar_t, addr_t, l2_id_t, user_t)
-  `AXI_TYPEDEF_R_CHAN_T(cl_l2_r_t, cl_data_t, l2_id_t, user_t)
-  `AXI_TYPEDEF_REQ_T(cl_l2_req_t, l2_aw_t, cl_w_t, l2_ar_t)
-  `AXI_TYPEDEF_RESP_T(cl_l2_resp_t, l2_b_t, cl_l2_r_t)
-  cl_l2_req_t   cl_l2_req;
-  cl_l2_resp_t  cl_l2_resp;
+  // ID width converter towards L2 data and prog.
+  typedef logic [L2DataIdWidth-1:0] l2d_id_t;
+  `AXI_TYPEDEF_AW_CHAN_T(l2d_aw_t, addr_t, l2d_id_t, user_t)
+  `AXI_TYPEDEF_B_CHAN_T(l2d_b_t, l2d_id_t, user_t)
+  `AXI_TYPEDEF_AR_CHAN_T(l2d_ar_t, addr_t, l2d_id_t, user_t)
+  `AXI_TYPEDEF_R_CHAN_T(cl_l2d_r_t, cl_data_t, l2d_id_t, user_t)
+  `AXI_TYPEDEF_REQ_T(cl_l2d_req_t, l2d_aw_t, cl_w_t, l2d_ar_t)
+  `AXI_TYPEDEF_RESP_T(cl_l2d_resp_t, l2d_b_t, cl_l2d_r_t)
+  cl_l2d_req_t   cl_l2d_req;
+  cl_l2d_resp_t  cl_l2d_resp;
   axi_id_remap #(
     .AxiSlvPortIdWidth    (XbarOupIdWidth),
-    .AxiMstPortIdWidth    (L2IdWidth),
+    .AxiMstPortIdWidth    (L2DataIdWidth),
     .AxiSlvPortMaxUniqIds (8),  // TODO: calibrate
     .AxiMaxTxnsPerId      (2),  // TODO: calibrate (=depth of store buffer?)
     .slv_req_t            (xbar_oup_req_t),
     .slv_resp_t           (xbar_oup_resp_t),
-    .mst_req_t            (cl_l2_req_t),
-    .mst_resp_t           (cl_l2_resp_t)
-  ) i_iw_converter_l2 (
+    .mst_req_t            (cl_l2d_req_t),
+    .mst_resp_t           (cl_l2d_resp_t)
+  ) i_iw_converter_l2d (
     .clk_i,
     .rst_ni,
     .slv_req_i  (from_xbar_req[NumClusters]),
     .slv_resp_o (from_xbar_resp[NumClusters]),
-    .mst_req_o  (cl_l2_req),
-    .mst_resp_i (cl_l2_resp)
+    .mst_req_o  (cl_l2d_req),
+    .mst_resp_i (cl_l2d_resp)
   );
 
-  // Data width converter towards L2.
-  typedef logic [L2DataWidth-1:0]   l2_data_t;
-  typedef logic [L2DataWidth/8-1:0] l2_strb_t;
-  `AXI_TYPEDEF_W_CHAN_T(l2_w_t, l2_data_t, l2_strb_t, user_t)
-  `AXI_TYPEDEF_R_CHAN_T(l2_r_t, l2_data_t, l2_id_t, user_t)
+  // Data width converter towards L2 data.
+  typedef logic [L2DataDataWidth-1:0]   l2d_data_t;
+  typedef logic [L2DataDataWidth/8-1:0] l2d_strb_t;
+  `AXI_TYPEDEF_W_CHAN_T(l2d_w_t, l2d_data_t, l2d_strb_t, user_t)
+  `AXI_TYPEDEF_R_CHAN_T(l2d_r_t, l2d_data_t, l2d_id_t, user_t)
   axi_dw_converter #(
     .AxiMaxReads          (8),  // TODO: calibrate
     .AxiSlvPortDataWidth  (ClDataWidth),
-    .AxiMstPortDataWidth  (L2DataWidth),
+    .AxiMstPortDataWidth  (L2DataDataWidth),
     .AxiAddrWidth         (AddrWidth),
-    .AxiIdWidth           (L2IdWidth),
-    .aw_chan_t            (l2_aw_t),
+    .AxiIdWidth           (L2DataIdWidth),
+    .aw_chan_t            (l2d_aw_t),
     .slv_w_chan_t         (cl_w_t),
-    .mst_w_chan_t         (l2_w_t),
-    .b_chan_t             (l2_b_t),
-    .ar_chan_t            (l2_ar_t),
-    .slv_r_chan_t         (cl_l2_r_t),
-    .mst_r_chan_t         (l2_r_t),
-    .axi_slv_req_t        (cl_l2_req_t),
-    .axi_slv_resp_t       (cl_l2_resp_t),
-    .axi_mst_req_t        (l2_req_t),
-    .axi_mst_resp_t       (l2_resp_t)
-  ) i_dw_converter_l2 (
+    .mst_w_chan_t         (l2d_w_t),
+    .b_chan_t             (l2d_b_t),
+    .ar_chan_t            (l2d_ar_t),
+    .slv_r_chan_t         (cl_l2d_r_t),
+    .mst_r_chan_t         (l2d_r_t),
+    .axi_slv_req_t        (cl_l2d_req_t),
+    .axi_slv_resp_t       (cl_l2d_resp_t),
+    .axi_mst_req_t        (l2d_req_t),
+    .axi_mst_resp_t       (l2d_resp_t)
+  ) i_dw_converter_l2d (
     .clk_i,
     .rst_ni,
-    .slv_req_i  (cl_l2_req),
-    .slv_resp_o (cl_l2_resp),
-    .mst_req_o  (l2_req_o),
-    .mst_resp_i (l2_resp_i)
+    .slv_req_i  (cl_l2d_req),
+    .slv_resp_o (cl_l2d_resp),
+    .mst_req_o  (l2d_req_o),
+    .mst_resp_i (l2d_resp_i)
   );
 
-  // ID width converter towards peripherals.
-  typedef logic [PeriphIdWidth-1:0] periph_id_t;
-  `AXI_TYPEDEF_AW_CHAN_T(periph_aw_t, addr_t, periph_id_t, user_t)
-  `AXI_TYPEDEF_B_CHAN_T(periph_b_t, periph_id_t, user_t)
-  `AXI_TYPEDEF_AR_CHAN_T(periph_ar_t, addr_t, periph_id_t, user_t)
-  `AXI_TYPEDEF_R_CHAN_T(cl_periph_r_t, cl_data_t, periph_id_t, user_t)
-  `AXI_TYPEDEF_REQ_T(cl_periph_req_t, periph_aw_t, cl_w_t, periph_ar_t)
-  `AXI_TYPEDEF_RESP_T(cl_periph_resp_t, periph_b_t, cl_periph_r_t)
-  cl_periph_req_t   cl_periph_req;
-  cl_periph_resp_t  cl_periph_resp;
+  // ID width converter towards L2 prog.
+  typedef logic [L2ProgIdWidth-1:0] l2i_id_t;
+  `AXI_TYPEDEF_AW_CHAN_T(l2i_aw_t, addr_t, l2i_id_t, user_t)
+  `AXI_TYPEDEF_B_CHAN_T(l2i_b_t, l2i_id_t, user_t)
+  `AXI_TYPEDEF_AR_CHAN_T(l2i_ar_t, addr_t, l2i_id_t, user_t)
+  `AXI_TYPEDEF_R_CHAN_T(cl_l2i_r_t, cl_data_t, l2i_id_t, user_t)
+  `AXI_TYPEDEF_REQ_T(cl_l2i_req_t, l2i_aw_t, cl_w_t, l2i_ar_t)
+  `AXI_TYPEDEF_RESP_T(cl_l2i_resp_t, l2i_b_t, cl_l2i_r_t)
+  cl_l2i_req_t   cl_l2i_req;
+  cl_l2i_resp_t  cl_l2i_resp;
   axi_id_remap #(
     .AxiSlvPortIdWidth    (XbarOupIdWidth),
-    .AxiMstPortIdWidth    (PeriphIdWidth),
-    .AxiSlvPortMaxUniqIds (4),  // TODO: calibrate
-    .AxiMaxTxnsPerId      (1),  // TODO: calibrate
+    .AxiMstPortIdWidth    (L2ProgIdWidth),
+    .AxiSlvPortMaxUniqIds (8),  // TODO: calibrate
+    .AxiMaxTxnsPerId      (2),  // TODO: calibrate (=depth of store buffer?)
     .slv_req_t            (xbar_oup_req_t),
     .slv_resp_t           (xbar_oup_resp_t),
-    .mst_req_t            (cl_periph_req_t),
-    .mst_resp_t           (cl_periph_resp_t)
-  ) i_iw_converter_periph (
+    .mst_req_t            (cl_l2i_req_t),
+    .mst_resp_t           (cl_l2i_resp_t)
+  ) i_iw_converter_l2i (
     .clk_i,
     .rst_ni,
-    .slv_req_i  (from_xbar_req[NumClusters+1]),
-    .slv_resp_o (from_xbar_resp[NumClusters+1]),
-    .mst_req_o  (cl_periph_req),
-    .mst_resp_i (cl_periph_resp)
+    .slv_req_i  (from_xbar_req[NumClusters + 1]),
+    .slv_resp_o (from_xbar_resp[NumClusters + 1]),
+    .mst_req_o  (cl_l2i_req),
+    .mst_resp_i (cl_l2i_resp)
   );
 
-  // Data width converter towards peripherals.
-  typedef logic [PeriphDataWidth-1:0]   periph_data_t;
-  typedef logic [PeriphDataWidth/8-1:0] periph_strb_t;
-  `AXI_TYPEDEF_W_CHAN_T(periph_w_t, periph_data_t, periph_strb_t, user_t)
-  `AXI_TYPEDEF_R_CHAN_T(periph_r_t, periph_data_t, periph_id_t, user_t)
+  // Data width converter towards L2 prog.
+  typedef logic [L2ProgDataWidth-1:0]   l2i_data_t;
+  typedef logic [L2ProgDataWidth/8-1:0] l2i_strb_t;
+  `AXI_TYPEDEF_W_CHAN_T(l2i_w_t, l2i_data_t, l2i_strb_t, user_t)
+  `AXI_TYPEDEF_R_CHAN_T(l2i_r_t, l2i_data_t, l2i_id_t, user_t)
   axi_dw_converter #(
-    .AxiMaxReads          (4),  // TODO: calibrate
+    .AxiMaxReads          (8),  // TODO: calibrate
     .AxiSlvPortDataWidth  (ClDataWidth),
-    .AxiMstPortDataWidth  (PeriphDataWidth),
+    .AxiMstPortDataWidth  (L2ProgDataWidth),
     .AxiAddrWidth         (AddrWidth),
-    .AxiIdWidth           (PeriphIdWidth),
-    .aw_chan_t            (periph_aw_t),
+    .AxiIdWidth           (L2ProgIdWidth),
+    .aw_chan_t            (l2i_aw_t),
     .slv_w_chan_t         (cl_w_t),
-    .mst_w_chan_t         (periph_w_t),
-    .b_chan_t             (periph_b_t),
-    .ar_chan_t            (periph_ar_t),
-    .slv_r_chan_t         (cl_periph_r_t),
-    .mst_r_chan_t         (periph_r_t),
-    .axi_slv_req_t        (cl_periph_req_t),
-    .axi_slv_resp_t       (cl_periph_resp_t),
-    .axi_mst_req_t        (periph_req_t),
-    .axi_mst_resp_t       (periph_resp_t)
-  ) i_dw_converter_periph (
+    .mst_w_chan_t         (l2i_w_t),
+    .b_chan_t             (l2i_b_t),
+    .ar_chan_t            (l2i_ar_t),
+    .slv_r_chan_t         (cl_l2i_r_t),
+    .mst_r_chan_t         (l2i_r_t),
+    .axi_slv_req_t        (cl_l2i_req_t),
+    .axi_slv_resp_t       (cl_l2i_resp_t),
+    .axi_mst_req_t        (l2i_req_t),
+    .axi_mst_resp_t       (l2i_resp_t)
+  ) i_dw_converter_l2i (
     .clk_i,
     .rst_ni,
-    .slv_req_i  (cl_periph_req),
-    .slv_resp_o (cl_periph_resp),
-    .mst_req_o  (periph_req_o),
-    .mst_resp_i (periph_resp_i)
+    .slv_req_i  (cl_l2i_req),
+    .slv_resp_o (cl_l2i_resp),
+    .mst_req_o  (l2i_req_o),
+    .mst_resp_i (l2i_resp_i)
   );
+
 
 endmodule

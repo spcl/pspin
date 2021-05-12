@@ -13,139 +13,135 @@
 
 package automatic pspin_cfg_pkg;
 
-  localparam int unsigned       HOST_AXI_AW             = 64;
+  localparam int unsigned       NUM_CLUSTERS                = 4;    // number of clusters
+  localparam int unsigned       NUM_CORES                   = 8;    // number of cores per cluster
 
-  // Interface parameters
-  localparam int unsigned       AXI_AW                  = pulp_cluster_cfg_pkg::AXI_AW;
-  localparam int unsigned       AXI_WIDE_DW             = 512; // [bit], must be a power of 2
-  localparam int unsigned       AXI_IW                  = 6;
-  localparam int unsigned       AXI_UW                  = pulp_cluster_cfg_pkg::AXI_UW;
+  // AXI
+  localparam int unsigned       AXI_SOC_AW                  = 34;   // [bit]
+  localparam int unsigned       AXI_HOST_AW                 = 64;   // [bit]
+  localparam int unsigned       AXI_WIDE_DW                 = 512;  // [bit], must be a power of 2
+  localparam int unsigned       AXI_NARROW_DW               = 64;   // [bit], must be a power of 2
+  localparam int unsigned       AXI_IW                      = 6;    // [bit]
+  localparam int unsigned       AXI_UW                      = 4;    // [bit]
 
-  localparam int unsigned       SOC_DMA_AXI_REQ_DEPTH   = 12;
-  localparam int unsigned       SOC_DMA_REQ_FIFO_DEPT   = 64; //tune me!
+  // SOC DMA
+  localparam int unsigned       SOC_DMA_AXI_REQ_DEPTH       = 12;   // tune me!
+  localparam int unsigned       SOC_DMA_REQ_FIFO_DEPT       = 64;   // tune me!
 
-  localparam int unsigned       C_SIZE_WIDTH            = AXI_AW;
-  localparam int unsigned       C_MSGID_WIDTH           = 10;
-  localparam int unsigned       C_ADDR_WIDTH            = AXI_AW;
-  localparam int unsigned       C_HOST_ADDR_WIDTH       = HOST_AXI_AW;
-  localparam int unsigned       NUM_CLUSTERS            = 4;
-  localparam int unsigned       NUM_CORES               = 8;
+  // MPQ engine
+  localparam int unsigned       NUM_MPQ                     = 1024;
+  localparam int unsigned       NUM_MPQ_CELLS               = 128;
+  localparam int unsigned       NUM_MPQ_STATIC_CELLS        = 1; //per MPQ
 
-  //MPQ engine
-  localparam int unsigned       NUM_MPQ                 = 256;
-  localparam int unsigned       NUM_MPQ_CELLS           = 128;
-  localparam int unsigned       NUM_MPQ_STATIC_CELLS    = 1; //per MPQ
+  // Constants used for decoding HER info
+  localparam int unsigned       C_SIZE_WIDTH                = 32;   
+  localparam int unsigned       C_MSGID_WIDTH               = 10;
+  localparam int unsigned       C_ADDR_WIDTH                = AXI_SOC_AW;
+  localparam int unsigned       C_HOST_ADDR_WIDTH           = AXI_HOST_AW;
 
-  localparam int unsigned       HER_FLAGS_IS_HDR_IDX    = 4;
-  localparam int unsigned       HER_FLAGS_IS_CMPL_IDX   = 5;
+  // L1 organization
+  localparam int unsigned       L1_CLUSTER_BASE             = 32'h1000_0000;
+  localparam int unsigned       L1_CLUSTER_SPAN             = 32'h0040_0000; // address space reserved to a cluster is 4 MiB
+  localparam int unsigned       L1_CLUSTER_SIZE             = 32'h0010_0000; // 1 MiB
+  localparam int unsigned       L1_RUNTIME_OFFSET           = 32'h0000_0400; // 1 KiB reserved at the beginning.
+  localparam int unsigned       L1_RUNTIME_SIZE             = 32'h0000_4000; // 16 KiB
+  localparam int unsigned       L1_PKT_BUFF_OFFSET          = L1_RUNTIME_OFFSET + L1_RUNTIME_SIZE;
+  localparam int unsigned       L1_PKT_BUFF_SIZE            = 32'h0001_0000; // 64 KiB
+  localparam int unsigned       L1_SCRATCHPAD_OFFSET        = L1_PKT_BUFF_OFFSET + L1_PKT_BUFF_SIZE;
+  localparam int unsigned       L1_SCRATCHPAD_SIZE          = L1_CLUSTER_SIZE - L1_PKT_BUFF_OFFSET;
 
-  localparam int unsigned       L1_CLUSTER_BASE         = 32'h1000_0000;
-  localparam int unsigned       L1_CLUSTER_MEM_SIZE     = 32'h0040_0000; //address space reserved to a cluster is 4 MiB
-
-  //this is the actual L1 memory size
-  localparam int unsigned       L1_CLUSTER_ACTUAL_MEM_SIZE = 32'h0010_0000; // 1 MiB
-
-  //L1_RUNTIME_OFFSET + L1_RUNTIME_SIZE < L1_SIZE
-
-  localparam int unsigned       L1_RUNTIME_OFFSET       = 32'h0000_0400; // 1 KiB reserved at the beginning.
-  localparam int unsigned       L1_RUNTIME_SIZE         = 32'h0000_4000; // 16 KiB
-
-  localparam int unsigned       L1_PKT_BUFF_OFFSET      = L1_RUNTIME_OFFSET + L1_RUNTIME_SIZE;
-  localparam int unsigned       L1_PKT_BUFF_SIZE        = 32'h0001_0000; // 64 KiB
-
-  localparam int unsigned       L1_SCRATCHPAD_OFFSET    = L1_PKT_BUFF_OFFSET + L1_PKT_BUFF_SIZE;
-  localparam int unsigned       L1_SCRATCHPAD_SIZE      = L1_CLUSTER_ACTUAL_MEM_SIZE - L1_PKT_BUFF_OFFSET;
-
-  //number of HERs that can be buffered (allows to overlap DMA transfer to running handlers)
-  localparam int unsigned       BUFFERED_HERS_PER_CLUSTER = 12;
+  // Number of HERs that can be buffered (allows to overlap DMA transfer to running handlers)
+  localparam int unsigned       BUFFERED_HERS_PER_CLUSTER   = 12;
 
   // the number of HERs in a cluster is the number of buffer ones + the ones running
-  localparam int unsigned       NUM_HERS_PER_CLUSTER    = BUFFERED_HERS_PER_CLUSTER + NUM_CORES;
+  localparam int unsigned       NUM_HERS_PER_CLUSTER        = BUFFERED_HERS_PER_CLUSTER + NUM_CORES;
 
-  //number of messages per cluster
-  localparam int unsigned       NUM_MSG_PER_CLUSTER     = NUM_MPQ / NUM_CLUSTERS;
-
-  //max number of commands that an HPU can keep in flight
-  localparam int unsigned       NUM_HPU_CMDS            = 4;
+  // Max number of commands that an HPU can keep in flight
+  localparam int unsigned       NUM_HPU_CMDS                = 4;
 
   //Number of command interfaces (NIC outbound, soc-level DMA) and IDs
   //NOTE: the IDs need to be consistent with the inputs of the cmd unit.
-  localparam int unsigned NUM_CMD_INTERFACES          = 3;
-  localparam int unsigned CMD_HOSTDIRECT_ID           = 0;
-  localparam int unsigned CMD_NIC_OUTBOUND_ID         = 1;
-  localparam int unsigned CMD_EDMA_ID                 = 2;
+  localparam int unsigned       NUM_CMD_INTERFACES          = 3;
+  localparam int unsigned       CMD_HOSTDIRECT_ID           = 0;
+  localparam int unsigned       CMD_NIC_OUTBOUND_ID         = 1;
+  localparam int unsigned       CMD_EDMA_ID                 = 2;
 
-  // L2 program memory
-  localparam int unsigned MEM_PROG_SIZE               = 32*1024;
+  // L2 sizing
+  localparam int unsigned L2_HND_SIZE        = 32'h0040_0000;
+  localparam int unsigned L2_HND_CUT_DW      = 64;
+  localparam int unsigned L2_HND_CUT_N_WORDS = 16384;
+  localparam int unsigned L2_HND_N_PAR_CUTS  = 32;
 
-  // L2 packet buffer
-  localparam int unsigned MEM_PKT_SIZE                = 4*1024*1024;
-  localparam int unsigned MEM_PKT_N_PAR_CUTS          = 32;
-  localparam int unsigned MEM_PKT_CUT_N_WORDS         = 2048;
-  localparam int unsigned MEM_PKT_CUT_DW              = 512;
+  localparam int unsigned L2_PKT_SIZE        = 32'h0040_0000;
+  localparam int unsigned L2_PKT_CUT_DW      = 512;
+  localparam int unsigned L2_PKT_CUT_N_WORDS = 2048;
+  localparam int unsigned L2_PKT_N_PAR_CUTS  = 32;
 
-  // L2 handler memory
-  localparam int unsigned MEM_HND_SIZE                = 4*1024*1024;
-  localparam int unsigned MEM_HND_N_PAR_CUTS          = 32;
-  localparam int unsigned MEM_HND_CUT_N_WORDS         = 16384;
-  localparam int unsigned MEM_HND_CUT_DW              = 64;
+  localparam int unsigned L2_PROG_SIZE       = 32'h0000_8000;
+
+  // L2 address map
+  localparam int unsigned L2_HND_ADDR_START  = 32'h1C00_0000;
+  localparam int unsigned L2_HND_ADDR_END    = L2_HND_ADDR_START + L2_HND_SIZE - 1;
+
+  localparam int unsigned L2_PKT_ADDR_START  = 32'h1D00_0000;
+  localparam int unsigned L2_PKT_ADDR_END    = L2_PKT_ADDR_START + L2_PKT_SIZE - 1;
+  
+  localparam int unsigned L2_PROG_ADDR_START = 32'h1E00_0000;
+  localparam int unsigned L2_PROG_ADDR_END = L2_PROG_ADDR_START + L2_PROG_SIZE - 1;
+
+  localparam int unsigned L2D_MIN_ADDR = L2_HND_ADDR_START;
+  localparam int unsigned L2D_MAX_ADDR = L2_PKT_ADDR_END;
 
   // Interface types
-  typedef logic [AXI_AW-1:0]         addr_t;
-  typedef logic [AXI_WIDE_DW-1:0]    data_t;
-  typedef logic [AXI_WIDE_DW/8-1:0]  strb_t;
-  typedef logic [AXI_IW-1:0]         id_t;
-  typedef logic [AXI_UW-1:0]         user_t;
-  typedef logic [HOST_AXI_AW-1:0]    host_addr_t;
-  `AXI_TYPEDEF_AW_CHAN_T(aw_t, addr_t, id_t, user_t)
-  `AXI_TYPEDEF_W_CHAN_T(w_t, data_t, strb_t, user_t)
-  `AXI_TYPEDEF_B_CHAN_T(b_t, id_t, user_t)
-  `AXI_TYPEDEF_AR_CHAN_T(ar_t, addr_t, id_t, user_t)
-  `AXI_TYPEDEF_R_CHAN_T(r_t, data_t, id_t, user_t)
-  `AXI_TYPEDEF_REQ_T(req_t, aw_t, w_t, ar_t)
-  `AXI_TYPEDEF_RESP_T(resp_t, b_t, r_t)
+  typedef logic [AXI_SOC_AW-1:0]      addr_t;
+  typedef logic [AXI_HOST_AW-1:0]     host_addr_t;
+  typedef logic [AXI_WIDE_DW-1:0]     wide_data_t;
+  typedef logic [AXI_WIDE_DW/8-1:0]   wide_strb_t;
+  typedef logic [AXI_NARROW_DW-1:0]   narrow_data_t;
+  typedef logic [AXI_NARROW_DW/8-1:0] narrow_strb_t;
+  typedef logic [AXI_IW-1:0]          id_t;
+  typedef logic [AXI_UW-1:0]          user_t;
 
-  `AXI_TYPEDEF_AW_CHAN_T(aw_host_t, host_addr_t, id_t, user_t)
-  `AXI_TYPEDEF_AR_CHAN_T(ar_host_t, host_addr_t, id_t, user_t)
-  `AXI_TYPEDEF_REQ_T(host_req_t, aw_host_t, w_t, ar_host_t)
-  `AXI_TYPEDEF_RESP_T(host_resp_t, b_t, r_t)
+  `AXI_TYPEDEF_ALL(soc_wide, addr_t, id_t, wide_data_t, wide_strb_t, user_t)
+  `AXI_TYPEDEF_ALL(soc_narrow, addr_t, id_t, narrow_data_t, narrow_strb_t, user_t)
+  `AXI_TYPEDEF_ALL(host_wide, host_addr_t, id_t, wide_data_t, wide_strb_t, user_t)
 
+  // Scheduling types
   typedef logic [$clog2(NUM_HERS_PER_CLUSTER):0] cluster_occup_t;
-  typedef logic [31:0] pkt_ptr_t;
-
+  typedef logic [C_ADDR_WIDTH-1:0] pkt_ptr_t;
   typedef logic [C_ADDR_WIDTH-1:0] mem_addr_t;
   typedef logic [C_SIZE_WIDTH-1:0] mem_size_t;
 
-
   // feedback descriptor
   typedef struct packed {
-    logic [C_ADDR_WIDTH-1:0]   pkt_addr;
-    mem_size_t                 pkt_size;
-    logic [C_MSGID_WIDTH-1:0]  msgid;
-    logic                      trigger_feedback;
+    logic [C_ADDR_WIDTH-1:0]      pkt_addr;
+    mem_size_t                    pkt_size;
+    logic [C_MSGID_WIDTH-1:0]     msgid;
+    logic                         trigger_feedback;
   } feedback_descr_t;
 
+  // MPQ meta descriptor
   typedef struct packed {
 
     //handler memory
-    mem_addr_t                 handler_mem_addr;
-    mem_size_t                 handler_mem_size;
+    mem_addr_t                    handler_mem_addr;
+    mem_size_t                    handler_mem_size;
 
     //host memory
-    host_addr_t                host_mem_addr;
-    mem_size_t                 host_mem_size;
+    host_addr_t                   host_mem_addr;
+    mem_size_t                    host_mem_size;
 
     //header handler
-    mem_addr_t                 hh_addr;
-    mem_size_t                 hh_size;
+    mem_addr_t                    hh_addr;
+    mem_size_t                    hh_size;
 
     //payload handler
-    mem_addr_t                 ph_addr;
-    mem_size_t                 ph_size;
+    mem_addr_t                    ph_addr;
+    mem_size_t                    ph_size;
 
     //completion (aka tail) handler
-    mem_addr_t                 th_addr;
-    mem_size_t                 th_size;
+    mem_addr_t                    th_addr;
+    mem_size_t                    th_size;
 
     //L1 scratchpads
     mem_addr_t [NUM_CLUSTERS-1:0] scratchpad_addr;
@@ -153,6 +149,7 @@ package automatic pspin_cfg_pkg;
 
   } mpq_meta_t;
 
+  // Handler execution request (HER)
   typedef struct packed {
 
     logic [C_MSGID_WIDTH-1:0]  msgid;
@@ -167,8 +164,8 @@ package automatic pspin_cfg_pkg;
     mpq_meta_t                 mpq_meta;
   } her_descr_t;
 
-  //typedef enum logic [1:0] {HeaderHandler, PayloadHandler, CompletionHandler} her_task_type_t;
-  // job descriptor
+  // Job descriptor (an HER can generate multiple jobs). This is what is
+  // sent to the clusters.
   typedef struct packed {
 
     logic [C_MSGID_WIDTH-1:0]       msgid;
@@ -192,19 +189,7 @@ package automatic pspin_cfg_pkg;
 
   } handler_task_t;
 
-  // DMA transfer descriptor
-  typedef struct packed {
-    logic [31:0] num_bytes;
-    logic [31:0] dst_addr_high;
-    logic [31:0] dst_addr_low;
-    logic [31:0] src_addr_high;
-    logic [31:0] src_addr_low;
-    logic        deburst;
-    logic        decouple;
-    logic        serialize;
-  } transf_descr_t;
-
-  // DMA transfer descriptor
+  // DMA transfer descriptor (32 bit addresses)
   typedef struct packed {
     logic [31:0] num_bytes;
     logic [31:0] dst_addr;
@@ -214,7 +199,7 @@ package automatic pspin_cfg_pkg;
     logic        serialize;
   } transf_descr_32_t;
 
-    // DMA transfer descriptor
+  // DMA transfer descriptor (64 bit addresses)
   typedef struct packed {
     logic [31:0] num_bytes;
     logic [65:0] dst_addr;
@@ -222,7 +207,7 @@ package automatic pspin_cfg_pkg;
     logic        deburst;
     logic        decouple;
     logic        serialize;
-  } transf_descr_soc_t;
+  } transf_descr_64_t;
 
   // Task descriptor (sent by the local scheduler to the HPU driver)
   typedef struct packed {
@@ -236,7 +221,6 @@ package automatic pspin_cfg_pkg;
     pkt_ptr_t         pkt_ptr;
   } task_feedback_descr_t;
 
-
   // a bit ugly but they are shared between the mpq_engine and the mpq_fsm, so not sure
   // how to share these two types differertly (except for passing both of them as parameters, which
   // would be ugly as well)
@@ -249,7 +233,9 @@ package automatic pspin_cfg_pkg;
       logic                             eom_seen;
   } mpq_t;
 
-  /* commands */
+  //////////////
+  /* Commands */
+  //////////////
 
   // network ID (e.g., IP address)
   typedef logic [31:0] nid_t;
