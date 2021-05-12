@@ -17,7 +17,7 @@ package automatic pspin_cfg_pkg;
   localparam int unsigned       NUM_CORES                   = 8;    // number of cores per cluster
 
   // AXI
-  localparam int unsigned       AXI_SOC_AW                  = 34;   // [bit]
+  localparam int unsigned       AXI_SOC_AW                  = 32;   // [bit]
   localparam int unsigned       AXI_HOST_AW                 = 64;   // [bit]
   localparam int unsigned       AXI_WIDE_DW                 = 512;  // [bit], must be a power of 2
   localparam int unsigned       AXI_NARROW_DW               = 64;   // [bit], must be a power of 2
