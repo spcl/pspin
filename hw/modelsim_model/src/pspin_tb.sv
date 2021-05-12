@@ -107,7 +107,7 @@ module pspin_tb #();
         wait (rst_n);
         $display("starting!");
         //wait(dut.i_mpq_engine.mpq_busy == '0 && dut.i_mpq_engine.eos_i && dut.i_mpq_engine.fifo_empty);
-        #1000ns
+        #10us
         //wait (0);
         $display("ending!");
         //print_clusters_stats();

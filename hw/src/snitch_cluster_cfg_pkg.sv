@@ -21,7 +21,7 @@ package snitch_cluster_cfg_pkg;
   localparam int unsigned UserWidth = pspin_cfg_pkg::AXI_UW;
 
   localparam int unsigned ICacheLineWidth [NrHives] = '{ 128 };
-  localparam int unsigned ICacheLineCount [NrHives] = '{ 65536 };
+  localparam int unsigned ICacheLineCount [NrHives] = '{ 1024 };
   localparam int unsigned ICacheSets [NrHives] = '{ 4 };
 
   localparam int unsigned PhysicalAddrWidth = pspin_cfg_pkg::AXI_SOC_AW;

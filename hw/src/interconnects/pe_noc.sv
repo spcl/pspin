@@ -118,9 +118,11 @@ module pe_noc #(
     assign xbar_addr_map[i].end_addr = cl_end_addr_i[i];
   end
 
+  assign xbar_addr_map[NumClusters].idx = NumClusters;
   assign xbar_addr_map[NumClusters].start_addr = l2d_start_addr_i;
   assign xbar_addr_map[NumClusters].end_addr = l2d_end_addr_i;
 
+  assign xbar_addr_map[NumClusters+1].idx = NumClusters + 1;
   assign xbar_addr_map[NumClusters + 1].start_addr = l2i_start_addr_i;
   assign xbar_addr_map[NumClusters + 1].end_addr = l2i_end_addr_i;
 
