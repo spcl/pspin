@@ -28,6 +28,7 @@
 //                "ones":   Each bit gets initialized with 1'b1.
 //                "random": Each bit gets random initialized with 1'b0 or 1'b1.
 //                "none":   Each bit gets initialized with 1'bx. (default)
+//                "skip":   Skips the initialization.
 // - PrintSimCfg: Prints at the beginning of the simulation a `Hello` message with
 //                the instantiated parameters and signal widths.
 //
@@ -84,12 +85,20 @@ module tc_sram #(
 
   // SRAM simulation initialization
   data_t [NumWords-1:0] init_val;
+  logic skip_sim_init;
+
   initial begin : proc_sram_init
+    skip_sim_init = 1'b0;
+    if (SimInit == "skip") begin
+      skip_sim_init = 1'b1;
+    end
+
     for (int unsigned i = 0; i < NumWords; i++) begin
       for (int unsigned j = 0; j < DataWidth; j++) begin
         case (SimInit)
           "zeros":  init_val[i][j] = 1'b0;
           "ones":   init_val[i][j] = 1'b1;
+          "skip":   init_val[i][j] = 1'b0; 
           `ifndef VERILATOR
           "random": init_val[i][j] = $urandom();
           `endif
@@ -126,8 +135,10 @@ module tc_sram #(
   // write memory array
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
-      for (int unsigned i = 0; i < NumWords; i++) begin
-        sram[i] <= init_val[i];
+      if (!skip_sim_init) begin
+        for (int unsigned i = 0; i < NumWords; i++) begin
+          sram[i] <= init_val[i];
+        end
       end
       for (int i = 0; i < NumPorts; i++) begin
         r_addr_q[i] <= {AddrWidth{1'b0}};

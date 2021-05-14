@@ -114,5 +114,12 @@ module pspin_tb #();
         $finish(1);
     end
 
+    initial begin
+        wait (rst_n);
+        $readmemh("./prog_mem_stim.slm", i_pspin.i_prog_mem.i_sram.i_tc_sram.sram);
+    end
+
+
+
 
 endmodule

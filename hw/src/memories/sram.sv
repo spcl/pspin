@@ -13,7 +13,7 @@
 module sram #(
   parameter int unsigned DATA_WIDTH = 0,   // [bit]
   parameter int unsigned N_WORDS    = 0,
-  parameter              SimInit    = "none",  
+  parameter              SimInit    = "skip",  
   // Dependent parameters, do not override!
   parameter int unsigned N_BYTES = DATA_WIDTH/8,
   parameter type addr_t = logic[$clog2(N_WORDS)-1:0],
