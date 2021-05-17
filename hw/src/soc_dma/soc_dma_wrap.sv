@@ -39,7 +39,7 @@ module soc_dma_wrap #(
     //command
     input  logic             cmd_req_valid_i,
     output logic             cmd_req_ready_o,
-    input  pspin_cmd_t       cmd_req_i,
+    input  pspin_cmd_req_t   cmd_req_i,
 
     //response
     output logic             cmd_resp_valid_o,

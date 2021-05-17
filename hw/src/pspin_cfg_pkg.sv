@@ -80,18 +80,26 @@ package automatic pspin_cfg_pkg;
   localparam int unsigned L2_PROG_SIZE       = 32'h0000_8000;
 
   // L2 address map
-  localparam longint unsigned L2_HND_ADDR_START  = 34'h0_1C00_0000;
-  localparam longint unsigned L2_HND_ADDR_END    = L2_HND_ADDR_START + L2_HND_SIZE - 1;
+  localparam logic [AXI_SOC_AW-1:0] L2_HND_ADDR_START  = 48'h00_1C00_0000;
+  localparam logic [AXI_SOC_AW-1:0] L2_HND_ADDR_END    = L2_HND_ADDR_START + L2_HND_SIZE - 1;
 
-  localparam longint unsigned L2_PKT_ADDR_START  = 34'h0_1D00_0000;
-  localparam longint unsigned L2_PKT_ADDR_END    = L2_PKT_ADDR_START + L2_PKT_SIZE - 1;
+  localparam logic [AXI_SOC_AW-1:0] L2_PKT_ADDR_START  = 48'h00_1D00_0000;
+  localparam logic [AXI_SOC_AW-1:0] L2_PKT_ADDR_END    = L2_PKT_ADDR_START + L2_PKT_SIZE - 1;
   
-  localparam longint unsigned L2_PROG_ADDR_START = 34'h0_1E00_0000;
-  localparam longint unsigned L2_PROG_ADDR_END = L2_PROG_ADDR_START + L2_PROG_SIZE - 1;
+  localparam logic [AXI_SOC_AW-1:0] L2_PROG_ADDR_START = 48'h00_1E00_0000;
+  localparam logic [AXI_SOC_AW-1:0] L2_PROG_ADDR_END = L2_PROG_ADDR_START + L2_PROG_SIZE - 1;
 
-  localparam longint unsigned L2D_MIN_ADDR = L2_HND_ADDR_START;
-  localparam longint unsigned L2D_MAX_ADDR = L2_PKT_ADDR_END;
+  localparam logic [AXI_SOC_AW-1:0] L2D_MIN_ADDR = L2_HND_ADDR_START;
+  localparam logic [AXI_SOC_AW-1:0] L2D_MAX_ADDR = L2_PKT_ADDR_END;
 
+  // Cluster and core ID widths
+  localparam int unsigned HART_ID_WIDTH     = 16;
+  localparam int unsigned CLUSTER_ID_WIDTH  = 16;
+
+  // HPU driver address space (mmio)
+  localparam logic [AXI_SOC_AW-1:0] HPU_DRIVER_BASE_ADDR = 48'h00_1b00_0000;
+  localparam int HPU_DRIVER_SIZE = 1024;
+  
   // Interface types
   typedef logic [AXI_SOC_AW-1:0]      addr_t;
   typedef logic [AXI_HOST_AW-1:0]     host_addr_t;
@@ -301,7 +309,7 @@ package automatic pspin_cfg_pkg;
     pspin_cmd_descr_t descr;
 
     logic       generate_event;
-  } pspin_cmd_t;
+  } pspin_cmd_req_t;
 
   typedef struct packed {
      pspin_cmd_id_t cmd_id;

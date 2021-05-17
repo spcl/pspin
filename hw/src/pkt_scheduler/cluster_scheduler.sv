@@ -8,21 +8,23 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-import pspin_cfg_pkg::*;
-
 module cluster_scheduler #(
-    parameter int NUM_HERS_PER_CLUSTER  = 64,
-    parameter int L1_PKT_BUFF_SIZE      = 512,
-    parameter int L1_CLUSTER_BASE       = 0,
-    parameter int L1_CLUSTER_MEM_SIZE   = 0,
-    parameter int L1_RUNTIME_OFFSET     = 0,
-    parameter int TASKS_FIFO_DEPTH      = 1
+    parameter int unsigned NUM_CORES = 8,
+    parameter int unsigned NUM_HERS_PER_CLUSTER  = 64,
+    parameter int unsigned L1_PKT_BUFF_SIZE      = 512,
+    parameter int unsigned ADDR_WIDTH            = 32,
+    parameter type handler_task_t = logic,
+    parameter type hpu_handler_task_t = logic,
+    parameter type task_feedback_descr_t = logic,
+    parameter type feedback_descr_t = logic,
+    parameter type dma_xfer_t = logic,
+    /* Do not override */
+    parameter type addr_t = logic [ADDR_WIDTH-1:0]
 ) (
+    input  logic                                        clk_i,
+    input  logic                                        rst_ni,
 
-    input logic                                         clk_i,
-    input logic                                         rst_ni,
-
-    input logic [5:0]                                   cluster_id_i,
+    input  addr_t                                       pkt_buff_start_addr_i,
 
     //task from scheduler
     input  logic                                        task_valid_i,
@@ -37,7 +39,7 @@ module cluster_scheduler #(
     //dma request to DMA engine
     output logic                                        dma_xfer_valid_o,
     input  logic                                        dma_xfer_ready_i,
-    output transf_descr_32_t                            dma_xfer_o,
+    output dma_xfer_t                                   dma_xfer_o,
 
     //dma response from DMA engine
     input  logic                                        dma_resp_i,
@@ -77,7 +79,6 @@ module cluster_scheduler #(
     //true if we can issue a DMA transfer a
     logic can_issue_dma;
 
-    logic [31:0] l1_pkt_base_addr;
     logic [31:0] l1_pkt_ptr;
 
     //free HPUs
@@ -96,7 +97,7 @@ module cluster_scheduler #(
     typedef enum logic {Ready, WaitDMA} state_t;
     state_t state_d, state_q;
 
-    transf_descr_32_t dma_xfer, dma_xfer_q, dma_xfer_d;
+    dma_xfer_t dma_xfer, dma_xfer_q, dma_xfer_d;
 
     // buffer the tasks in a fifo
     fifo_v3 #(
@@ -169,9 +170,8 @@ module cluster_scheduler #(
 
     assign cluster_active_o = (~hpu_active_i == '0);
 
-    assign l1_pkt_base_addr = (L1_CLUSTER_BASE + cluster_id_i * L1_CLUSTER_MEM_SIZE) + L1_PKT_BUFF_OFFSET;
-    assign l1_pkt_ptr       = l1_pkt_base_addr + free_pkt_idx;
-    assign feedback_pkt_idx = hpu_feedback_arb_i.pkt_ptr - l1_pkt_base_addr;
+    assign l1_pkt_ptr       = pkt_buff_start_addr_i + free_pkt_idx;
+    assign feedback_pkt_idx = hpu_feedback_arb_i.pkt_ptr - pkt_buff_start_addr_i;
 
     /*** Accepting tasks and starting DMA xfers ***/
 
@@ -265,26 +265,9 @@ module cluster_scheduler #(
         end
     end
 
-    `ifndef VERILATOR
+
     // pragma translate_off
-    initial begin
-        forever begin
-            @(posedge clk_i);
-            if (task_valid_i && task_ready_o) begin
-                $display("%0d CLUSTER %0d got task (msg_id: %0d; size: %0d; addr: %0d)!", $time, cluster_id_i, task_descr_i.msgid, task_descr_i.pkt_size, task_descr_i.pkt_addr);
-
-                if (dma_xfer_valid_o && dma_xfer_ready_i && dma_xfer.src_addr[5:0] != '0) begin
-                    $display("WARNING: source address of DMA transfer is not 512-bit aligned: this will negatively impact performance!");
-                end
-                if (dma_xfer_valid_o && dma_xfer_ready_i && dma_xfer.dst_addr[5:0] != '0) begin
-                    $display("WARNING: destination address of DMA transfer is not 512-bit aligned: this will negatively impact performance!");
-                end
-            end
-        end
-    end
-
     initial begin : p_assertions
-
         assert property (@(posedge clk_i) (dma_req_pop) |-> (!dma_req_empty)) else
             $fatal(1, "We cannot pop from an empty queue!");
 
@@ -293,6 +276,5 @@ module cluster_scheduler #(
 
     end
     // pragma translate_on
-    `endif
 
 endmodule

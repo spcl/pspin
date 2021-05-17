@@ -8,10 +8,10 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-import pspin_cfg_pkg::*;
-
 module cluster_cmd #(
-    parameter int unsigned NUM_CORES = 8
+    parameter int unsigned NUM_CORES = 8,
+    parameter type cmd_req_t = logic,
+    parameter type cmd_resp_t = logic
 ) (
     input  logic                        clk_i,
     input  logic                        rst_ni,
@@ -19,17 +19,17 @@ module cluster_cmd #(
     //from hpu drivers (commands)
     output logic [NUM_CORES-1:0]        cmd_ready_o,
     input  logic [NUM_CORES-1:0]        cmd_valid_i,
-    input  pspin_cmd_t [NUM_CORES-1:0]  cmd_i,
+    input  cmd_req_t [NUM_CORES-1:0]    cmd_i,
 
     //to uncluster 
     input  logic                        cmd_ready_i,
     output logic                        cmd_valid_o,
-    output pspin_cmd_t                  cmd_o 
+    output cmd_req_t                    cmd_o 
 );
 
     rr_arb_tree #(
         .NumIn      (NUM_CORES),
-        .DataType   (pspin_cmd_t),
+        .DataType   (cmd_req_t),
         .ExtPrio    (0),
         .AxiVldRdy  (1),
         .LockIn     (1)

@@ -46,7 +46,7 @@ module pspin_tb #();
     // pspin -> nic outbound
     logic                               nic_cmd_ready;
     logic                               nic_cmd_valid;
-    pspin_cfg_pkg::pspin_cmd_t          nic_cmd;
+    pspin_cfg_pkg::pspin_cmd_req_t      nic_cmd;
     logic                               nic_cmd_resp_valid;
     pspin_cfg_pkg::pspin_cmd_resp_t     nic_cmd_resp;
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 ETH Zurich and University of Bologna
+// Copyright (c) 2021 ETH Zurich and University of Bologna
 // Copyright and related rights are licensed under the Solderpad Hardware
 // License, Version 0.51 (the "License"); you may not use this file except in
 // compliance with the License.  You may obtain a copy of the License at
@@ -10,6 +10,7 @@
 
 `include "axi/assign.svh"
 `include "axi/typedef.svh"
+`include "common_cells/assertions.svh"
 
 module pspin 
   import pspin_cfg_pkg::*;
@@ -49,7 +50,7 @@ module pspin
   // To NIC command unit
   input  logic                            nic_cmd_ready_i,
   output logic                            nic_cmd_valid_o,
-  output pspin_cmd_t                      nic_cmd_o,
+  output pspin_cmd_req_t                  nic_cmd_o,
 
   // From NIC command unit
   input  logic                            nic_cmd_resp_valid_i,
@@ -151,7 +152,7 @@ module pspin
   // clusters -> command unit
   logic [NUM_CLUSTERS-1:0]                          cluster_cmd_ready;
   logic [NUM_CLUSTERS-1:0]                          cluster_cmd_valid;
-  pspin_cmd_t [NUM_CLUSTERS-1:0]                    cluster_cmd;
+  pspin_cmd_req_t [NUM_CLUSTERS-1:0]                cluster_cmd;
 
   // command unit -> clusters
   logic                                             cluster_cmd_resp_valid;
@@ -160,14 +161,14 @@ module pspin
   // CMD unit <-> soc-level DMA
   logic                                             edma_cmd_ready;
   logic                                             edma_cmd_valid;
-  pspin_cmd_t                                       edma_cmd;
+  pspin_cmd_req_t                                   edma_cmd;
   logic                                             edma_resp_valid;
   pspin_cmd_resp_t                                  edma_resp;
 
   // CMD unit <-> HostDirect unit
   logic                                             hdir_cmd_valid;
   logic                                             hdir_cmd_ready;
-  pspin_cmd_t                                       hdir_cmd;
+  pspin_cmd_req_t                                   hdir_cmd;
   logic                                             hdir_resp_valid;
   pspin_cmd_resp_t                                  hdir_resp;
   
@@ -375,7 +376,9 @@ module pspin
   
   cmd_unit #(
     .NUM_CLUSTERS                (NUM_CLUSTERS),
-    .NUM_CMD_INTERFACES          (NUM_CMD_INTERFACES)
+    .NUM_CMD_INTERFACES          (NUM_CMD_INTERFACES),
+    .cmd_req_t                   (pspin_cmd_req_t),
+    .cmd_resp_t                  (pspin_cmd_resp_t)
   ) i_cmd_unit (
     .rst_ni                      (rst_ni),
     .clk_i                       (clk_i),
@@ -447,7 +450,7 @@ module pspin
     .axi_host_b_t       (host_wide_b_chan_t),
     .axi_host_req_t     (host_wide_req_t),
     .axi_host_res_t     (host_wide_resp_t),
-    .cmd_req_t          (pspin_cmd_t),
+    .cmd_req_t          (pspin_cmd_req_t),
     .cmd_res_t          (pspin_cmd_resp_t),
     .cmd_id_t           (pspin_cmd_id_t)
   ) i_host_direct (
@@ -470,9 +473,14 @@ module pspin
   //**********//
 
   for (genvar i = 0; i < NUM_CLUSTERS; i++) begin: gen_clusters
-    logic [9:0] hard_base_id;
-    assign hard_base_id = i * (snitch_cluster_cfg_pkg::NrCores);
-  
+    logic [31:0] hart_base_id;
+    logic [snitch_cluster_cfg_pkg::PhysicalAddrWidth-1:0] l1_pkt_buff_base_addr;
+
+    //assign hart_base_id = i * (snitch_cluster_cfg_pkg::NrCores);
+    assign hart_base_id[31:16] = i;
+    assign hart_base_id[15:0] = '0;
+    assign l1_pkt_buff_base_addr = cl_start_addr[i] + L1_PKT_BUFF_OFFSET;
+
     snitch_cluster #(
       .PhysicalAddrWidth (snitch_cluster_cfg_pkg::PhysicalAddrWidth),
       .NarrowDataWidth (snitch_cluster_cfg_pkg::NarrowDataWidth),
@@ -536,27 +544,52 @@ module pspin
       .RegisterSequencer (snitch_cluster_cfg_pkg::RegisterSequencer),
       .IsoCrossing (snitch_cluster_cfg_pkg::IsoCrossing),
       .NarrowXbarLatency (axi_pkg::CUT_ALL_PORTS),
-      .WideXbarLatency (axi_pkg::CUT_ALL_PORTS)
+      .WideXbarLatency (axi_pkg::CUT_ALL_PORTS),
+      .HERCount (pspin_cfg_pkg::NUM_HERS_PER_CLUSTER),
+      .L1PktBuffSize (pspin_cfg_pkg::L1_PKT_BUFF_SIZE),
+      .NumCmds (pspin_cfg_pkg::NUM_HPU_CMDS),
+      .ClusterIdWidth (pspin_cfg_pkg::CLUSTER_ID_WIDTH),
+      .CoreIdWidth (pspin_cfg_pkg::HART_ID_WIDTH),
+      .HPUDriverMemSize (pspin_cfg_pkg::HPU_DRIVER_SIZE),
+      .handler_task_t (pspin_cfg_pkg::handler_task_t),
+      .hpu_handler_task_t (pspin_cfg_pkg::hpu_handler_task_t),
+      .task_feedback_descr_t (pspin_cfg_pkg::task_feedback_descr_t),
+      .feedback_descr_t (pspin_cfg_pkg::feedback_descr_t),
+      .cmd_req_t (pspin_cfg_pkg::pspin_cmd_req_t),
+      .cmd_resp_t (pspin_cfg_pkg::pspin_cmd_resp_t)
     ) i_cluster (
-      .clk_i                ( clk_i                 ),
-      .rst_ni               ( rst_ni                ),
-      .debug_req_i          ( '0                    ),
-      .meip_i               ( '0                    ),
-      .mtip_i               ( '0                    ),
-      .msip_i               ( '0                    ),
-      .hart_base_id_i       ( hard_base_id          ),
-      .cluster_base_addr_i  ( cl_start_addr[i]      ),
-      .clk_d2_bypass_i      ( 1'b0                  ),
-      .narrow_in_req_i      ( cl_narrow_in_req[i]   ),
-      .narrow_in_resp_o     ( cl_narrow_in_resp[i]  ),
-      .narrow_out_req_o     ( cl_narrow_out_req[i]  ),
-      .narrow_out_resp_i    ( cl_narrow_out_resp[i] ),
-      .wide_out_req_o       ( cl_wide_out_req[i]    ),
-      .wide_out_resp_i      ( cl_wide_out_resp[i]   ),
-      .wide_in_req_i        ( cl_wide_in_req[i]     ),
-      .wide_in_resp_o       ( cl_wide_in_resp[i]    )
+      .clk_i                  ( clk_i                     ),
+      .rst_ni                 ( rst_ni                    ),
+      .debug_req_i            ( '0                        ),
+      .meip_i                 ( '0                        ),
+      .mtip_i                 ( '0                        ),
+      .msip_i                 ( '0                        ),
+      .hart_base_id_i         ( hart_base_id              ),
+      .cluster_base_addr_i    ( cl_start_addr[i]          ),
+      .clk_d2_bypass_i        ( 1'b0                      ),
+      .narrow_in_req_i        ( cl_narrow_in_req[i]       ),
+      .narrow_in_resp_o       ( cl_narrow_in_resp[i]      ),
+      .narrow_out_req_o       ( cl_narrow_out_req[i]      ),
+      .narrow_out_resp_i      ( cl_narrow_out_resp[i]     ),
+      .wide_out_req_o         ( cl_wide_out_req[i]        ),
+      .wide_out_resp_i        ( cl_wide_out_resp[i]       ),
+      .wide_in_req_i          ( cl_wide_in_req[i]         ),
+      .wide_in_resp_o         ( cl_wide_in_resp[i]        ),
+      .task_valid_i           ( sched_loc_valid[i]        ),
+      .task_ready_o           ( sched_loc_ready[i]        ),
+      .task_descr_i           ( sched_loc_task[i]         ),
+      .feedback_valid_o       ( loc_sched_valid[i]        ),
+      .feedback_ready_i       ( loc_sched_ready[i]        ),
+      .feedback_o             ( loc_sched_feedback[i]     ),
+      .cluster_active_o       ( cluster_active[i]         ),
+      .cmd_ready_i            ( cluster_cmd_ready[i]      ),
+      .cmd_valid_o            ( cluster_cmd_valid[i]      ),
+      .cmd_o                  ( cluster_cmd[i]            ),
+      .cmd_resp_valid_i       ( cluster_cmd_resp_valid    ),
+      .cmd_resp_i             ( cluster_cmd_resp          ),
+      .hpu_driver_base_addr_i ( HPU_DRIVER_BASE_ADDR      ),
+      .pkt_buff_start_addr_i  ( l1_pkt_buff_base_addr     )
     );
-  
   end
 
   //*******************//
@@ -729,4 +762,8 @@ module pspin
     .l2_pkt_resp_i        (l2_pkt_resp_a                     )
   );
 
+  
+  `ASSERT_INIT(max_clusters, NUM_CLUSTERS <= 65536);
+  `ASSERT_INIT(max_cores, snitch_cluster_cfg_pkg::NrCores <= 65536);
+  
 endmodule

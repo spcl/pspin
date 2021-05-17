@@ -13,34 +13,36 @@ import pspin_cfg_pkg::*;
 module cmd_unit #(
     parameter int unsigned NUM_CLUSTERS             = 4,
     parameter int unsigned NUM_CMD_INTERFACES       = 2,
-    parameter int unsigned INTF_RESP_BUFF_SIZE      = 8
+    parameter int unsigned INTF_RESP_BUFF_SIZE      = 8,
+    parameter type cmd_req_t                        = logic,
+    parameter type cmd_resp_t                       = logic
 ) (
     input logic                                         clk_i,
     input logic                                         rst_ni,
 
     output logic [NUM_CLUSTERS-1:0]                     cmd_ready_o,
     input  logic [NUM_CLUSTERS-1:0]                     cmd_valid_i,
-    input  pspin_cmd_t [NUM_CLUSTERS-1:0]               cmd_i,
+    input  cmd_req_t [NUM_CLUSTERS-1:0]                 cmd_i,
 
     output logic                                        cmd_resp_valid_o,
-    output pspin_cmd_resp_t                             cmd_resp_o,
+    output cmd_resp_t                                   cmd_resp_o,
 
     input  logic [NUM_CMD_INTERFACES-1:0]               intf_ready_i,
     output logic [NUM_CMD_INTERFACES-1:0]               intf_valid_o,
-    output pspin_cmd_t [NUM_CMD_INTERFACES-1:0]         intf_cmd_o,
+    output cmd_req_t [NUM_CMD_INTERFACES-1:0]           intf_cmd_o,
 
     input  logic [NUM_CMD_INTERFACES-1:0]               intf_cmd_resp_valid_i,
-    input  pspin_cmd_resp_t [NUM_CMD_INTERFACES-1:0]    intf_cmd_resp_i
+    input  cmd_resp_t [NUM_CMD_INTERFACES-1:0]          intf_cmd_resp_i
 );
 
     /* spill registers from clusters */
     logic [NUM_CLUSTERS-1:0] cluster_cmd_ready;
     logic [NUM_CLUSTERS-1:0] cluster_cmd_valid;
-    pspin_cmd_t [NUM_CLUSTERS-1:0] cluster_cmd;
+    cmd_req_t [NUM_CLUSTERS-1:0] cluster_cmd;
 
     for (genvar i=0; i<NUM_CLUSTERS; i++) begin : gen_cluster_spill_reg
         spill_register #(
-            .T       (pspin_cmd_t)
+            .T       (cmd_req_t)
         ) i_cluster_cmd_spill (
             .clk_i   (clk_i),
             .rst_ni  (rst_ni),
@@ -83,7 +85,7 @@ module cmd_unit #(
     /* round robin on interfaces */
     logic [NUM_CMD_INTERFACES-1:0] cmd_arb_ready;
     logic [NUM_CMD_INTERFACES-1:0] cmd_arb_valid;
-    pspin_cmd_t [NUM_CMD_INTERFACES-1:0] cmd_arb_cmd;
+    cmd_req_t [NUM_CMD_INTERFACES-1:0] cmd_arb_cmd;
 
     logic [NUM_CMD_INTERFACES-1:0] fifo_in_flight_req_has_space;
 
@@ -91,7 +93,7 @@ module cmd_unit #(
         // select a cluster to serve
         rr_arb_tree #(
             .NumIn      (NUM_CLUSTERS),
-            .DataType   (pspin_cmd_t),
+            .DataType   (cmd_req_t),
             .ExtPrio    (0),
             .AxiVldRdy  (1),
             .LockIn     (1)
@@ -124,9 +126,9 @@ module cmd_unit #(
     logic [NUM_CMD_INTERFACES-1:0] fifo_resp_buffer_valid;
     logic [NUM_CMD_INTERFACES-1:0] fifo_resp_buffer_ready;
 
-    pspin_cmd_resp_t [NUM_CMD_INTERFACES-1:0] fifo_resp_buffer_data;
+    cmd_resp_t [NUM_CMD_INTERFACES-1:0] fifo_resp_buffer_data;
 
-    pspin_cmd_resp_t resp_arb_data;
+    cmd_resp_t resp_arb_data;
     logic resp_arb_valid;
 
     for (genvar i=0; i<NUM_CMD_INTERFACES; i++) begin: gen_fifo_req
@@ -154,7 +156,7 @@ module cmd_unit #(
 
     for (genvar i=0; i<NUM_CMD_INTERFACES; i++) begin: gen_fifo_resp
         fifo_v3 #(
-            .dtype     (pspin_cmd_resp_t),
+            .dtype     (cmd_resp_t),
             .DEPTH     (INTF_RESP_BUFF_SIZE)
         ) i_resp_fifo (
             .clk_i     (clk_i),
@@ -177,7 +179,7 @@ module cmd_unit #(
 
     rr_arb_tree #(
         .NumIn      (NUM_CMD_INTERFACES),
-        .DataType   (pspin_cmd_resp_t),
+        .DataType   (cmd_resp_t),
         .ExtPrio    (0),
         .AxiVldRdy  (1),
         .LockIn     (1)
@@ -197,7 +199,7 @@ module cmd_unit #(
 
     /* spill register to clusters */
     spill_register #(
-        .T(pspin_cmd_resp_t)
+        .T(cmd_resp_t)
     ) i_cluster_cmd_resp_spill (
         .clk_i   (clk_i),
         .rst_ni  (rst_ni),
