@@ -97,7 +97,7 @@ package automatic pspin_cfg_pkg;
   localparam int unsigned CLUSTER_ID_WIDTH  = 16;
 
   // HPU driver address space (mmio)
-  localparam logic [AXI_SOC_AW-1:0] HPU_DRIVER_BASE_ADDR = 48'h00_1b00_0000;
+  localparam logic [AXI_SOC_AW-1:0] HPU_DRIVER_BASE_ADDR = 48'h00_1b20_5000;
   localparam int HPU_DRIVER_SIZE = 1024;
   
   // Interface types

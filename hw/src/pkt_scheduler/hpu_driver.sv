@@ -71,7 +71,7 @@ module hpu_driver #(
     logic cmd_resp_valid;
     logic disable_commands;
 
-    assign frontend_select_d = core_req_i.q.addr[SelBitOffset];
+    assign frontend_select_d = (core_req_i.q_valid) ? core_req_i.q.addr[SelBitOffset] : frontend_select_q;
 
     assign cluster_id = hart_id_i[31:CLUSTER_ID_WIDTH];
     assign core_id = hart_id_i[CLUSTER_ID_WIDTH-1:0];
@@ -82,11 +82,11 @@ module hpu_driver #(
     stream_demux #(
         .N_OUP(2)
     ) i_frontend_demux (
-        .inp_valid_i    (core_req_i.q_valid),
-        .inp_ready_o    (core_resp_o.q_ready),
-        .oup_sel_i      (frontend_select_d),
-        .oup_valid_o    ({task_frontend_req.q_valid, cmd_frontend_req.q_valid}),
-        .oup_ready_i    ({task_frontend_resp.q_ready, cmd_frontend_resp.q_ready})
+        .inp_valid_i    ( core_req_i.q_valid                                      ),
+        .inp_ready_o    ( core_resp_o.q_ready                                     ),
+        .oup_sel_i      ( frontend_select_d                                       ),
+        .oup_valid_o    ( {cmd_frontend_req.q_valid,  task_frontend_req.q_valid  }),
+        .oup_ready_i    ( {cmd_frontend_resp.q_ready, task_frontend_resp.q_ready })
     );
 
     assign task_frontend_req.q = core_req_i.q;
@@ -96,13 +96,13 @@ module hpu_driver #(
         .DATA_T(drsp_chan_t),
         .N_INP(2)
     ) i_frontend_mux (
-        .inp_data_i     ({task_frontend_resp.p, cmd_frontend_resp.p}),
-        .inp_valid_i    ({task_frontend_resp.p_valid, cmd_frontend_resp.p_valid}),
-        .inp_ready_o    ({task_frontend_req.p_ready, cmd_frontend_req.p_ready}),
-        .inp_sel_i      (frontend_select_q),
-        .oup_data_o     (core_resp_o.p),
-        .oup_valid_o    (core_resp_o.p_valid),
-        .oup_ready_i    (core_req_i.p_ready)
+        .inp_data_i     ( {cmd_frontend_resp.p,       task_frontend_resp.p       }),
+        .inp_valid_i    ( {cmd_frontend_resp.p_valid, task_frontend_resp.p_valid }),
+        .inp_ready_o    ( {cmd_frontend_req.p_ready,  task_frontend_req.p_ready  }),
+        .inp_sel_i      ( frontend_select_q                                       ),
+        .oup_data_o     ( core_resp_o.p                                           ),
+        .oup_valid_o    ( core_resp_o.p_valid                                     ),
+        .oup_ready_i    ( core_req_i.p_ready                                      )
     );    
 
     task_frontend #(
@@ -198,14 +198,13 @@ module task_frontend #(
     output logic                       disable_commands_o,
     input  logic                       can_send_feedback_i
 );
-    `ifdef VERILATOR
 
-    typedef enum logic [1:0] {Init, Idle, Running, SendingFeedback} state_t;
+    typedef enum logic [2:0] {Init, Idle, Running, StallingFeedback, StallingResponse} state_t;
     state_t state_d, state_q;
 
     hpu_handler_task_t current_task_q, current_task_d;
 
-    logic trigger_feedback;
+    logic trigger_feedback_d, trigger_feedback_q;
 
     logic valid_d, valid_q;
     logic [31:0] rdata_d, rdata_q;
@@ -218,33 +217,40 @@ module task_frontend #(
     logic [31:0] handler_error_code;
     logic handler_error;
 
+    logic response_blocked, feedback_blocked;
+
     //buffer feedback waiting for command to complete
     //NOTE: only one feedback at time can be buffered with this implementation!
     task_feedback_descr_t hpu_feedback;
-    logic feedback_buff_full, feedback_buff_empty;
+    logic feedback_buff_not_full, feedback_buff_full;
     logic feedback_buff_push;
-    fifo_v3 #(
-        .dtype     (task_feedback_descr_t),
-        .DEPTH     (1)
-    ) i_hpu_cmd_fifo (
-        .clk_i     (clk_i),
-        .rst_ni    (rst_ni),
-        .flush_i   (1'b0),
-        .testmode_i(1'b0),
-        .full_o    (feedback_buff_full),
-        .empty_o   (feedback_buff_empty),
-        .usage_o   (),
-        .data_i    (hpu_feedback),
-        .push_i    (feedback_buff_push),
-        .data_o    (hpu_feedback_o),
-        .pop_i     (hpu_feedback_ready_i && hpu_feedback_valid_o)
-    ); 
 
-    assign feedback_buff_push = !feedback_buff_full && (trigger_feedback || state_q==SendingFeedback);
-    assign disable_commands_o = !feedback_buff_empty;
+    stream_fifo #(
+        .FALL_THROUGH (1'b0),
+        .DEPTH (1),
+        .T(task_feedback_descr_t)
+    ) i_feedback_buff (
+        .clk_i          (clk_i),
+        .rst_ni         (rst_ni),
+        .flush_i        (1'b0),
+        .testmode_i     (1'b0),
+        .usage_o        (),
+        .data_i         (hpu_feedback),
+        .valid_i        (feedback_buff_push),
+        .ready_o        (feedback_buff_not_full),
+        .data_o         (hpu_feedback_o),  
+        .valid_o        (hpu_feedback_valid_o), 
+        .ready_i        (hpu_feedback_ready_i) 
+    );
 
-    assign r_rdata_o = rdata_q;
-    assign r_valid_o = valid_q;
+    assign feedback_buff_full = ~feedback_buff_not_full;
+    assign feedback_buff_push = trigger_feedback_d || (state_q == StallingFeedback);
+
+    assign disable_commands_o = hpu_feedback_valid_o;
+
+    assign core_resp_o.p.data = rdata_q;
+    assign core_resp_o.p_valid = valid_q;
+    assign core_resp_o.p.error = 1'b0; /* FIX ME */
 
     assign home_cluster_id = current_task_q.handler_task.msgid[$clog2(NUM_CLUSTERS)-1:0];
     assign l1_pkt_addr = current_task_q.pkt_ptr;
@@ -257,9 +263,11 @@ module task_frontend #(
     assign hpu_feedback.feedback_descr.trigger_feedback = current_task_q.handler_task.trigger_feedback;
 
     assign hpu_task_ready_o = (state_q == Idle);
-    assign hpu_feedback_valid_o = can_send_feedback_i && !feedback_buff_empty;
 
     assign hpu_active_o = state_q != Init;
+
+    assign response_blocked = (core_resp_o.p_valid && ~core_req_i.p_ready);
+    assign feedback_blocked = (trigger_feedback_d && feedback_buff_full);
 
     always_comb begin
         state_d = state_q;
@@ -267,24 +275,37 @@ module task_frontend #(
 
         case (state_q)
             Init: begin
-                if (req_i) begin
+                if (core_req_i.q_valid) begin
                     state_d = Idle;
                 end
             end
+
             Idle: begin
                 if (hpu_task_valid_i) begin
-                    state_d = (hpu_task_i.handler_task.handler_fun == '0) ? SendingFeedback : Running;
+                    state_d = (hpu_task_i.handler_task.handler_fun == '0) ? StallingFeedback : Running;
                     current_task_d = hpu_task_i;
                 end
             end 
 
             Running: begin 
-                if (trigger_feedback) begin
-                    state_d = (feedback_buff_full) ? SendingFeedback : Idle;
+                if (response_blocked) begin
+                    state_d = StallingResponse;
+                end 
+                else if (feedback_blocked) begin
+                    state_d = StallingFeedback;
+                end 
+                else if (trigger_feedback_d) begin
+                    state_d = Idle;
                 end
             end
 
-            SendingFeedback: begin
+            StallingResponse: begin
+                if (!response_blocked) begin
+                    state_d = (feedback_blocked) ? StallingFeedback : Running;
+                end
+            end
+
+            StallingFeedback: begin
                 if (!feedback_buff_full) begin
                     state_d = Idle;
                 end
@@ -293,23 +314,23 @@ module task_frontend #(
             default: begin 
                 state_d = Idle;
             end
-
         endcase
     end
         
     always_comb begin   
-        gnt_o = 1'b0;    
-        trigger_feedback = 1'b0;
+        core_resp_o.q_ready = 1'b0;
+        trigger_feedback_d = trigger_feedback_q;
         rdata_d = rdata_q;
-        valid_d = 1'b0;
+        valid_d = (state_q != StallingResponse) ? 1'b0 : valid_q;
         handler_error_code = '0;
         handler_error = 1'b0;
 
-        if (state_q == Running && req_i) begin
-            gnt_o = 1'b1;     
+        if (state_q == Running && core_req_i.q_valid) begin
+            core_resp_o.q_ready = 1'b1;
             valid_d = 1'b1;
-            
-            case (add_i[7:0]) 
+            trigger_feedback_d = 1'b0;
+
+            case (core_req_i.q.addr[7:0]) 
 
                 /* Task info */
                 8'h00: begin //handler function
@@ -376,13 +397,13 @@ module task_frontend #(
                 /* Handler termination */
                 8'h50: begin //feedback flag (reading this address leads to the sending of the feedback)
                     rdata_d = 32'h00000000;
-                    trigger_feedback = 1'b1;
+                    trigger_feedback_d = 1'b1;
                 end
 
                 /* Handler error */
                 8'h54: begin
-                    if (~wen_ni) begin
-                        handler_error_code = wdata_i;
+                    if (core_req_i.q.write) begin
+                        handler_error_code = core_req_i.q.data;
                         handler_error = 1'b1;
                     end
                 end
@@ -396,14 +417,15 @@ module task_frontend #(
             current_task_q <= '0; //how to initialize this?
             valid_q <= 1'b0;
             rdata_q <= '0;
+            trigger_feedback_q <= 1'b0;
         end else begin
             state_q <= state_d;
             current_task_q <= current_task_d;
             valid_q <= valid_d;
             rdata_q <= rdata_d;
+            trigger_feedback_q <= trigger_feedback_d;
         end
     end
-    
     
     // pragma translate_off
     `ifndef VERILATOR
@@ -423,7 +445,7 @@ module task_frontend #(
                 $display("%0d INFO HPU_TIME %0d %0d %0d", $stime, cluster_id_i, core_id_i, timediff);                  
             end
 
-            if (state_q == Running && trigger_feedback) begin
+            if (state_q == Running && trigger_feedback_d) begin
                 timediff = $stime - handler_start_time;
                 $display("%0d INFO HANDLER_TIME %0d %0d %0d %0d %0d %0d %0d", $stime, cluster_id_i, core_id_i, current_task_q.handler_task.msgid, current_task_q.handler_task.handler_fun, timediff, current_task_q.handler_task.pkt_addr, current_task_q.handler_task.pkt_size);
             end
@@ -453,7 +475,6 @@ module task_frontend #(
         end
     `endif
     // pragma translate_on
-    `endif
 endmodule
 
 module cmd_frontend #(
