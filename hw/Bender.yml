@@ -50,3 +50,10 @@ sources:
      - modelsim_model/src/packet_generator.sv
      # Level 3
      - modelsim_model/src/pspin_tb.sv
+
+ - target: verilator
+   files:
+     # Level 0 
+     - verilator_model/tb/pspin_verilator.sv
+
+

@@ -49,6 +49,7 @@ package automatic pspin_cfg_pkg;
   localparam int unsigned       L1_PKT_BUFF_SIZE            = 32'h0001_0000; // 64 KiB
   localparam int unsigned       L1_SCRATCHPAD_OFFSET        = L1_PKT_BUFF_OFFSET + L1_PKT_BUFF_SIZE;
   localparam int unsigned       L1_SCRATCHPAD_SIZE          = L1_CLUSTER_SIZE - L1_PKT_BUFF_OFFSET;
+  localparam int unsigned       L1_NUM_BANKS                = 64;
 
   // Number of HERs that can be buffered (allows to overlap DMA transfer to running handlers)
   localparam int unsigned       BUFFERED_HERS_PER_CLUSTER   = 12;

@@ -16,7 +16,6 @@
 #ifndef HOST
 #include <handler.h>
 #include <packets.h>
-#include <spin_dma.h>
 #else
 #include <handler_profiler.h>
 #endif

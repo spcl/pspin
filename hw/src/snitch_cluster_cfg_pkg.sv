@@ -28,7 +28,7 @@ package snitch_cluster_cfg_pkg;
   localparam int unsigned BootAddr = 32'h1e000000;
 
   localparam int unsigned TCDMDepth = 4096;
-  localparam int unsigned TCDMBanks = 64;
+  localparam int unsigned TCDMBanks = pspin_cfg_pkg::L1_NUM_BANKS;
 
   localparam int unsigned DMAAxiReqFifoDepth = 3;
   localparam int unsigned DMAReqFifoDepth = 3;
