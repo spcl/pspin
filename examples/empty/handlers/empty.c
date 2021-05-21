@@ -28,7 +28,6 @@ volatile __attribute__((section(".l2_handler_data"))) uint8_t handler_mem[] = {0
 
 __handler__ void empty_ph(handler_args_t *args) 
 {
-    //printf("Payload handler!\n");
 #if (NUM_INT_OP > 0)
     volatile int xx = 0;
     int x = xx;

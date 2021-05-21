@@ -41,14 +41,12 @@ void hpu_run()
     handler_args.hpu_gid = handler_args.cluster_id * NB_CORES + handler_args.hpu_id;
     handler_args.task = (task_t *) HWSCHED_HANDLER_MEM_ADDR;
 
-    printf("hey!\n");
-
     while (1) {
 
         handler_fn handler_fun = (handler_fn) MMIO_READ(HWSCHED_HANDLER_FUN_ADDR); 
 
         asm volatile ("nop"); /* TELEMETRY: HANDLER:START */
-        //handler_fun(&handler_args);
+        handler_fun(&handler_args);
         asm volatile ("nop"); /* TELEMETRY: HANDLER:END */
        
         MMIO_READ(HWSCHED_DOORBELL); 

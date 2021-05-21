@@ -374,6 +374,7 @@ module pspin_verilator
     );
 
     //TODO: move number of rows and number of cols in configuration file!
+    /*
     for (genvar iRow = 0; iRow < 1; iRow++) begin: gen_fill_l2_hnd_rows
         for (genvar iCol = 0; iCol < L2_HND_N_PAR_CUTS; iCol++) begin: gen_fill_l2_hnd_cols
             initial begin
@@ -384,6 +385,7 @@ module pspin_verilator
             end
         end
     end
+    */
 
     /*
     for (genvar iCluster = 0; iCluster < NUM_CLUSTERS; iCluster++) begin: gen_fill_tcdm_cluster
