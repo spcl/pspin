@@ -137,7 +137,7 @@ module tc_sram #(
     if (!rst_ni) begin
       if (!skip_sim_init) begin
         for (int unsigned i = 0; i < NumWords; i++) begin
-          sram[i] <= init_val[i];
+          sram[i] = init_val[i];
         end
       end
       for (int i = 0; i < NumPorts; i++) begin
@@ -165,7 +165,7 @@ module tc_sram #(
             // update value when write is set at clock
             for (int unsigned j = 0; j < DataWidth; j++) begin
               if (be_i[i][j/ByteWidth]) begin
-                sram[addr_i[i]][j] <= wdata_i[i][j];
+                sram[addr_i[i]][j] = wdata_i[i][j];
               end
             end
           end else begin

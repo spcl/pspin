@@ -10,4 +10,6 @@ overrides:
     fpnew: { path: deps/pulp_platform_fpnew }
     riscv-dbg: { path: deps/pulp_platform_riscv_dbg }
     register_interface: {path: deps/pulp_platform_register_interface}
+    future: {path: deps/pulp_platform_future}
+
 

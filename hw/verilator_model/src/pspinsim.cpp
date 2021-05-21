@@ -62,18 +62,18 @@
 
 using namespace PsPIN;
 
-AXIPort<uint32_t, uint64_t> ni_mst;
+AXIPort<uint64_t, uint64_t> ni_mst;
 ni_control_port_t ni_control;
-AXIPort<uint32_t, uint64_t> no_mst;
+AXIPort<uint64_t, uint64_t> no_mst;
 no_cmd_port_t no_cmd;
 AXIPort<uint64_t, uint64_t> pcie_slv_port;
-AXIPort<uint32_t, uint64_t> pcie_mst_port;
+AXIPort<uint64_t, uint64_t> pcie_mst_port;
 
 SimControl<Vpspin_verilator> *sim;
-NICInbound<AXIPort<uint32_t, uint64_t>> *ni;
-NICOutbound<AXIPort<uint32_t, uint64_t>> *no;
+NICInbound<AXIPort<uint64_t, uint64_t>> *ni;
+NICOutbound<AXIPort<uint64_t, uint64_t>> *no;
 PCIeSlave<AXIPort<uint64_t, uint64_t>> *pcie_slv;
-PCIeMaster<AXIPort<uint32_t, uint64_t>> *pcie_mst;
+PCIeMaster<AXIPort<uint64_t, uint64_t>> *pcie_mst;
 
 char slm_path[PATH_MAX];
 
@@ -132,10 +132,10 @@ int pspinsim_init(int argc, char **argv, pspin_conf_t *conf)
     AXI_MASTER_PORT_ASSIGN(tb, host_slave, &pcie_mst_port);
 
     // Instantiate simulation-only modules
-    ni = new NICInbound<AXIPort<uint32_t, uint64_t>>(ni_mst, ni_control, L2_PKT_BUFF_START, L2_PKT_BUFF_SIZE);
-    no = new NICOutbound<AXIPort<uint32_t, uint64_t>>(no_mst, no_cmd, conf->no_conf.network_G, conf->no_conf.max_pkt_size, conf->no_conf.max_network_queue_len);
+    ni = new NICInbound<AXIPort<uint64_t, uint64_t>>(ni_mst, ni_control, L2_PKT_BUFF_START, L2_PKT_BUFF_SIZE);
+    no = new NICOutbound<AXIPort<uint64_t, uint64_t>>(no_mst, no_cmd, conf->no_conf.network_G, conf->no_conf.max_pkt_size, conf->no_conf.max_network_queue_len);
     pcie_slv = new PCIeSlave<AXIPort<uint64_t, uint64_t>>(pcie_slv_port, conf->pcie_slv_conf.axi_aw_buffer, conf->pcie_slv_conf.axi_w_buffer, conf->pcie_slv_conf.axi_ar_buffer, conf->pcie_slv_conf.axi_r_buffer, conf->pcie_slv_conf.axi_b_buffer, conf->pcie_slv_conf.pcie_L, conf->pcie_slv_conf.pcie_G);
-    pcie_mst = new PCIeMaster<AXIPort<uint32_t, uint64_t>>(pcie_mst_port);
+    pcie_mst = new PCIeMaster<AXIPort<uint64_t, uint64_t>>(pcie_mst_port);
 
     // Add simulation only modules
     sim->add_module(*ni);

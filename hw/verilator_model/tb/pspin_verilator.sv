@@ -8,7 +8,6 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-import pspin_cfg_pkg::*;
 
 package automatic pspin_io;
 
@@ -21,7 +20,10 @@ package automatic pspin_io;
 
 endpackage
 
-module pspin_verilator #(
+module pspin_verilator 
+  import pspin_cfg_pkg::*;
+  import pspin_io::*;
+#(
 ) (
     /** Clocks and Resets **/
     input  logic                            clk_i,
@@ -311,10 +313,6 @@ module pspin_verilator #(
     input pspin_cmd_id_t                    nic_cmd_resp_id_i
 );
 
-    import pulp_cluster_cfg_pkg::N_TCDM_BANKS;
-    import pulp_cluster_cfg_pkg::TCDM_WORDS_PER_BANK;
-    import pspin_cfg_pkg::NUM_CLUSTERS;
-
     import "DPI-C" function string get_slm_path();
 
     `AXI_TYPEDEF_ALL( nic_wide, soc_addr_t,  id_t,  data_t,  strb_t,  user_t )
@@ -330,7 +328,7 @@ module pspin_verilator #(
 
     her_descr_t         her_descr;
     feedback_descr_t    feedback;
-    pspin_cmd_t         nic_cmd_req;
+    pspin_cmd_req_t     nic_cmd_req;
     pspin_cmd_resp_t    nic_cmd_resp;
 
     pspin #(
@@ -659,14 +657,15 @@ module pspin_verilator #(
 
 
   // Observe SoC bus for errors.
+  /*
   for (genvar iCluster = 0; iCluster < NUM_CLUSTERS; iCluster++) begin: gen_assert_cluster
-    assert property (@(posedge i_pspin.clk_i) i_pspin.rst_ni && i_pspin.cl_oup[iCluster].r_valid
-        |-> !i_pspin.cl_oup[iCluster].r_resp[1])
+    assert property (@(posedge i_pspin.clk_i) i_pspin.rst_ni && i_pspin.cl_narrow_out_req[iCluster].r_valid
+        |-> !i_pspin.cl_narrow_out_resp[iCluster].r.error])
       else $warning("R resp error at cl_oup[%01d]", iCluster);
 
-    assert property (@(posedge i_pspin.clk_i) i_pspin.rst_ni && i_pspin.cl_oup[iCluster].b_valid
-        |-> !i_pspin.cl_oup[iCluster].b_resp[1])
+    assert property (@(posedge i_pspin.clk_i) i_pspin.rst_ni && i_pspin.cl_narrow_out_req[iCluster].b_valid
+        |-> !i_pspin.cl_narrow_out_resp[iCluster].b.error)
       else $warning("B resp error at cl_oup[%01d]", iCluster);
   end
-
+  */
 endmodule

@@ -1,19 +1,10 @@
-// Copyright (c) 2014-2020 ETH Zurich, University of Bologna
-//
-// Copyright and related rights are licensed under the Solderpad Hardware
-// License, Version 0.51 (the "License"); you may not use this file except in
-// compliance with the License.  You may obtain a copy of the License at
-// http://solderpad.org/licenses/SHL-0.51. Unless required by applicable law
-// or agreed to in writing, software, hardware and materials distributed under
-// this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-// CONDITIONS OF ANY KIND, either express or implied. See the License for the
-// specific language governing permissions and limitations under the License.
+// Copyright 2020 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
 //
 // Andreas Kurth <akurth@iis.ee.ethz.ch>
 // Florian Zaruba <zarubaf@iis.ee.ethz.ch>
 // Wolfgang Roenninger <wroennin@iis.ee.ethz.ch>
-
-`include "common_cells/registers.svh"
 
 /// Remap AXI IDs from wide IDs at the slave port to narrower IDs at the master port.
 ///
@@ -127,7 +118,8 @@ module axi_id_remap #(
 
 
   // Remap tables keep track of in-flight bursts and their input and output IDs.
-  localparam int unsigned IdxWidth = cf_math_pkg::idx_width(AxiSlvPortMaxUniqIds);
+  localparam int unsigned IdxWidth =
+      $clog2(AxiSlvPortMaxUniqIds) > 0 ? $clog2(AxiSlvPortMaxUniqIds) : 1;
   typedef logic [AxiSlvPortMaxUniqIds-1:0]  field_t;
   typedef logic [AxiSlvPortIdWidth-1:0]     id_inp_t;
   typedef logic [IdxWidth-1:0]              idx_t;
@@ -194,12 +186,13 @@ module axi_id_remap #(
   );
 
   // Zero-extend output IDs if the output IDs is are wider than the IDs from the tables.
-  localparam ZeroWidth = AxiMstPortIdWidth - IdxWidth;
+  localparam int unsigned ZeroWidth = AxiMstPortIdWidth - IdxWidth;
   assign mst_req_o.ar.id = {{ZeroWidth{1'b0}}, rd_push_oup_id};
   assign mst_req_o.aw.id = {{ZeroWidth{1'b0}}, wr_push_oup_id};
 
   // Handle requests.
-  enum logic [1:0] {Ready, HoldAR, HoldAW, HoldAx} state_d, state_q;
+  typedef enum logic [1:0] {Ready, HoldAR, HoldAW, HoldAx} state_t;
+  state_t state_d, state_q;
   idx_t ar_id_d, ar_id_q,
         aw_id_d, aw_id_q;
   always_comb begin
@@ -279,17 +272,26 @@ module axi_id_remap #(
             aw_id_d = wr_push_oup_id;
           end
         end
-        priority casez ({mst_req_o.ar_valid, mst_resp_i.ar_ready,
-                         mst_req_o.aw_valid, mst_resp_i.aw_ready})
-          4'b1010: state_d = HoldAx;
-          4'b10??: state_d = HoldAR;
-          4'b??10: state_d = HoldAW;
-          default: state_d = Ready;
-        endcase
+
+        if ({mst_req_o.ar_valid, mst_resp_i.ar_ready,
+             mst_req_o.aw_valid, mst_resp_i.aw_ready} == 4'b1010) begin
+          state_d = HoldAx;
+        end else if ({mst_req_o.ar_valid, mst_resp_i.ar_ready} == 2'b10) begin
+          state_d = HoldAR;
+        end else if ({mst_req_o.aw_valid, mst_resp_i.aw_ready} == 2'b10) begin
+          state_d = HoldAW;
+        end else state_d = Ready;
+        // priority casez ({mst_req_o.ar_valid, mst_resp_i.ar_ready,
+        //                  mst_req_o.aw_valid, mst_resp_i.aw_ready})
+        //   4'b1010: state_d = HoldAx;
+        //   4'b10??: state_d = HoldAR;
+        //   4'b??10: state_d = HoldAW;
+        //   default: state_d = Ready;
+        // endcase
       end
 
       HoldAR: begin
-        // Drive `mst_req_o.ar.id` through `rd_push_oup_id`.
+        // Drive `mst_req_o.ar.id` through rd_push_oup_id.
         rd_push_oup_id      = ar_id_q;
         mst_req_o.ar_valid  = 1'b1;
         slv_resp_o.ar_ready = mst_resp_i.ar_ready;
@@ -299,7 +301,7 @@ module axi_id_remap #(
       end
 
       HoldAW: begin
-        // Drive mst_req_o.aw.id through `wr_push_oup_id`.
+        // Drive mst_req_o.aw.id through wr_push_oup_id.
         wr_push_oup_id      = aw_id_q;
         mst_req_o.aw_valid  = 1'b1;
         slv_resp_o.aw_ready = mst_resp_i.aw_ready;
@@ -328,9 +330,17 @@ module axi_id_remap #(
   end
 
   // Registers
-  `FFARN(ar_id_q, ar_id_d, '0, clk_i, rst_ni)
-  `FFARN(aw_id_q, aw_id_d, '0, clk_i, rst_ni)
-  `FFARN(state_q, state_d, Ready, clk_i, rst_ni)
+  always_ff @(posedge clk_i, negedge rst_ni) begin
+    if (!rst_ni) begin
+      ar_id_q <= '0;
+      aw_id_q <= '0;
+      state_q <= Ready;
+    end else begin
+      ar_id_q <= ar_id_d;
+      aw_id_q <= aw_id_d;
+      state_q <= state_d;
+    end
+  end
 
   // pragma translate_off
   `ifndef VERILATOR
@@ -349,8 +359,6 @@ module axi_id_remap #(
       else $fatal(1, "AXI AW address widths are not equal!");
     assert($bits(slv_req_i.w.data) == $bits(mst_req_o.w.data))
       else $fatal(1, "AXI W data widths are not equal!");
-    assert($bits(slv_req_i.w.user) == $bits(mst_req_o.w.user))
-      else $fatal(1, "AXI W user widths are not equal!");
     assert($bits(slv_req_i.ar.addr) == $bits(mst_req_o.ar.addr))
       else $fatal(1, "AXI AR address widths are not equal!");
     assert($bits(slv_resp_o.r.data) == $bits(mst_resp_i.r.data))
@@ -364,7 +372,6 @@ module axi_id_remap #(
     assert ($bits(mst_req_o.ar.id) == AxiMstPortIdWidth);
     assert ($bits(mst_resp_i.r.id) == AxiMstPortIdWidth);
   end
-  `endif
   default disable iff (!rst_ni);
   assert property (@(posedge clk_i) slv_req_i.aw_valid && slv_resp_o.aw_ready
       |-> mst_req_o.aw_valid && mst_resp_i.aw_ready);
@@ -380,8 +387,10 @@ module axi_id_remap #(
       |=> mst_req_o.ar_valid && $stable(mst_req_o.ar.id));
   assert property (@(posedge clk_i) mst_req_o.aw_valid && !mst_resp_i.aw_ready
       |=> mst_req_o.aw_valid && $stable(mst_req_o.aw.id));
+  `endif
   // pragma translate_on
 endmodule
+
 
 /// Internal module of [`axi_id_remap`](module.axi_id_remap): Table to remap input to output IDs.
 ///
@@ -415,7 +424,7 @@ module axi_id_remap_table #(
   localparam type id_inp_t = logic [InpIdWidth-1:0],
   /// Derived (**=do not override**) width of table index (ceiled binary logarithm of
   /// `MaxUniqInpIds`).
-  localparam int unsigned IdxWidth = cf_math_pkg::idx_width(MaxUniqInpIds),
+  localparam int unsigned IdxWidth = $clog2(MaxUniqInpIds) > 0 ? $clog2(MaxUniqInpIds) : 1,
   /// Derived (**=do not override**) type of table index (width = `IdxWidth`).
   localparam type idx_t = logic [IdxWidth-1:0],
   /// Derived (**=do not override**) type with one bit per table entry (thus also output ID).
@@ -521,7 +530,13 @@ module axi_id_remap_table #(
   end
 
   // Registers
-  `FFARN(table_q, table_d, '0, clk_i, rst_ni)
+  always_ff @(posedge clk_i, negedge rst_ni) begin
+    if (!rst_ni) begin
+      table_q <= '0;
+    end else begin
+      table_q <= table_d;
+    end
+  end
 
   // Assertions
   // pragma translate_off
@@ -545,7 +560,6 @@ module axi_id_remap_table #(
     end
   `endif
   // pragma translate_on
-
 endmodule
 
 

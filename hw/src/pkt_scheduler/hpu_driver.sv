@@ -466,7 +466,7 @@ module task_frontend #(
                 $display("[%0d][synt]: INFO HPU_TIME %0d %0d", $stime, cluster_id_i, core_id_i);                  
             end
 
-            if (state_q == Running && trigger_feedback) begin
+            if (state_q == Running && trigger_feedback_d == 1'b1 && trigger_feedback_q == 1'b0) begin
                 $display("[%0d][synt]: INFO HANDLER_TIME %0d %0d %0d %08x %08x %0d", $stime, cluster_id_i, core_id_i, current_task_q.handler_task.msgid, current_task_q.handler_task.handler_fun, current_task_q.handler_task.pkt_addr, current_task_q.handler_task.pkt_size);
             end
 
@@ -507,7 +507,7 @@ module cmd_frontend #(
     output logic                       cmd_valid_o,
     output cmd_req_t                   cmd_o
 );
-    `ifdef VERILATOR
+    `ifdef TODO
 
     localparam int unsigned ADD_ISSUE = 0;
     localparam int unsigned ADD_WAIT = 1;

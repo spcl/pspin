@@ -267,6 +267,7 @@ module cluster_scheduler #(
 
 
     // pragma translate_off
+    /*
     initial begin : p_assertions
         assert property (@(posedge clk_i) (dma_req_pop) |-> (!dma_req_empty)) else
             $fatal(1, "We cannot pop from an empty queue!");
@@ -275,6 +276,7 @@ module cluster_scheduler #(
             $fatal(1, "We received a packet that cannot store!");
 
     end
+    */
     // pragma translate_on
 
 endmodule
