@@ -2,13 +2,12 @@
 `include "axi/typedef.svh"
 
 import pspin_cfg_pkg::*;
+import pspin_tb_cfg_pkg::*;
 
 module pspin_tb #();
 
     timeunit 1ps;
     timeprecision 1ps;
-
-    localparam time                      CLK_PERIOD = 1ns;
 
     typedef logic [AXI_SOC_AW-1:0]      addr_t;
     typedef logic [AXI_HOST_AW-1:0]     host_addr_t;
@@ -60,6 +59,26 @@ module pspin_tb #();
         .rst_no (rst_n)
     );
 
+    packet_generator #(
+        .DataFilePath      ("sim_files/data.bin"),
+        .TaskFilePath      ("sim_files/tasks.csv"),
+        .TOT_NUM_CORES     (NUM_CORES),
+        .NUM_CLUSTERS      (NUM_CLUSTERS),
+        .N_MPQ             (NUM_MPQ),
+        .PKT_MEM_SIZE      (L2_PKT_SIZE)
+    ) i_packet_gen (
+        .clk_i            (clk),
+        .rst_ni           (rst_n),
+        .her_ready_i      (her_ready),
+        .her_valid_o      (her_valid),
+        .her_descr_o      (her),
+        .eos_o            (eos),
+        .feedback_valid_i (feedback_valid),
+        .feedback_ready_o (feedback_ready),
+        .feedback_i       (feedback),
+        .pspin_active_i   (pspin_active)
+    );
+
     pspin #(
         .host_in_req_t (host_in_req_t),
         .host_in_resp_t (host_in_resp_t),
@@ -106,13 +125,13 @@ module pspin_tb #();
         $display("init!");
         wait (rst_n);
         $display("starting!");
-        //wait(dut.i_mpq_engine.mpq_busy == '0 && dut.i_mpq_engine.eos_i && dut.i_mpq_engine.fifo_empty);
-        #10us
-        //wait (0);
+        wait(i_pspin.i_mpq_engine.mpq_busy == '0 && i_pspin.i_mpq_engine.eos_i && i_pspin.i_mpq_engine.fifo_empty);
+        #1us
         $display("ending!");
         //print_clusters_stats();
         $finish(1);
     end
+
 
     initial begin
         wait (rst_n);

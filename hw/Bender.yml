@@ -45,5 +45,8 @@ sources:
    files:
      # Level 0 
      - modelsim_model/src/clk_rst_gen.sv
+     - modelsim_model/src/pspin_tb_cfg_pkg.sv
      # Level 1
+     - modelsim_model/src/packet_generator.sv
+     # Level 3
      - modelsim_model/src/pspin_tb.sv

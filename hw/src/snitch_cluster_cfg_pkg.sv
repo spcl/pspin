@@ -3,7 +3,7 @@
 
 package snitch_cluster_cfg_pkg;
 
-  localparam int unsigned NrCores = pspin_cfg_pkg::NUM_CORES + 1;
+  localparam int unsigned NrCores = pspin_cfg_pkg::NUM_CORES;
   localparam int unsigned NrHives = 1;
 
   localparam int unsigned AddrWidth = pspin_cfg_pkg::AXI_SOC_AW;
@@ -33,30 +33,30 @@ package snitch_cluster_cfg_pkg;
   localparam int unsigned DMAAxiReqFifoDepth = 3;
   localparam int unsigned DMAReqFifoDepth = 3;
 
-  localparam int unsigned RVE     = 9'b000000000;
-  localparam int unsigned RVF     = 9'b111111111;
-  localparam int unsigned RVD     = 9'b111111111;
-  localparam int unsigned XF16    = 9'b000000000;
-  localparam int unsigned XF16ALT = 9'b000000000;
-  localparam int unsigned XF8     = 9'b000000000;
-  localparam int unsigned XFVEC   = 9'b000000000;
-  localparam int unsigned Xdma    = 9'b100000000;
-  localparam int unsigned Xssr    = 9'b111111111;
-  localparam int unsigned Xfrep   = 9'b111111111;
+  localparam int unsigned RVE     = 8'b00000000;
+  localparam int unsigned RVF     = 8'b11111111;
+  localparam int unsigned RVD     = 8'b11111111;
+  localparam int unsigned XF16    = 8'b00000000;
+  localparam int unsigned XF16ALT = 8'b00000000;
+  localparam int unsigned XF8     = 8'b00000000;
+  localparam int unsigned XFVEC   = 8'b00000000;
+  localparam int unsigned Xdma    = 8'b00000000;
+  localparam int unsigned Xssr    = 8'b11111111;
+  localparam int unsigned Xfrep   = 8'b11111111;
 
   localparam int unsigned NumSsrsMax = 3;
 
-  localparam int unsigned NumIntOutstandingLoads [9] = '{1, 1, 1, 1, 1, 1, 1, 1, 1};
-  localparam int unsigned NumIntOutstandingMem [9] = '{4, 4, 4, 4, 4, 4, 4, 4, 1};
-  localparam int unsigned NumFPOutstandingLoads [9] = '{4, 4, 4, 4, 4, 4, 4, 4, 4};
-  localparam int unsigned NumFPOutstandingMem [9] = '{4, 4, 4, 4, 4, 4, 4, 4, 1};
-  localparam int unsigned NumDTLBEntries [9] = '{1, 1, 1, 1, 1, 1, 1, 1, 2};
-  localparam int unsigned NumITLBEntries [9] = '{1, 1, 1, 1, 1, 1, 1, 1, 1};
-  localparam int unsigned NumSequencerInstr [9] = '{16, 16, 16, 16, 16, 16, 16, 16, 16};
-  localparam int unsigned NumSsrs [9] = '{3, 3, 3, 3, 3, 3, 3, 3, 3};
-  localparam int unsigned SsrMuxRespDepth [9] = '{4, 4, 4, 4, 4, 4, 4, 4, 4};
+  localparam int unsigned NumIntOutstandingLoads [NrCores] = '{1, 1, 1, 1, 1, 1, 1, 1};
+  localparam int unsigned NumIntOutstandingMem [NrCores] = '{4, 4, 4, 4, 4, 4, 4, 4};
+  localparam int unsigned NumFPOutstandingLoads [NrCores] = '{4, 4, 4, 4, 4, 4, 4, 4};
+  localparam int unsigned NumFPOutstandingMem [NrCores] = '{4, 4, 4, 4, 4, 4, 4, 4};
+  localparam int unsigned NumDTLBEntries [NrCores] = '{1, 1, 1, 1, 1, 1, 1, 1};
+  localparam int unsigned NumITLBEntries [NrCores] = '{1, 1, 1, 1, 1, 1, 1, 1};
+  localparam int unsigned NumSequencerInstr [NrCores] = '{16, 16, 16, 16, 16, 16, 16, 16};
+  localparam int unsigned NumSsrs [NrCores] = '{3, 3, 3, 3, 3, 3, 3, 3};
+  localparam int unsigned SsrMuxRespDepth [NrCores] = '{4, 4, 4, 4, 4, 4, 4, 4};
 
-  localparam int unsigned Hive [NrCores] = '{0, 0, 0, 0, 0, 0, 0, 0, 0};
+  localparam int unsigned Hive [NrCores] = '{0, 0, 0, 0, 0, 0, 0, 0};
 
   localparam int unsigned Radix = 2;
   localparam int unsigned RegisterOffloadReq = 1;
@@ -119,10 +119,7 @@ package snitch_cluster_cfg_pkg;
         PipeConfig: fpnew_pkg::BEFORE
   };
 
-  localparam snitch_ssr_pkg::ssr_cfg_t [3-1:0] SsrCfgs [9] = '{
-    '{'{0, 1, 4, 16, 18, 3, 4, 3, 4, 3},
-      '{0, 1, 4, 16, 18, 3, 4, 3, 4, 3},
-      '{0, 1, 4, 16, 18, 3, 4, 3, 4, 3}},
+  localparam snitch_ssr_pkg::ssr_cfg_t [3-1:0] SsrCfgs [NrCores] = '{
     '{'{0, 1, 4, 16, 18, 3, 4, 3, 4, 3},
       '{0, 1, 4, 16, 18, 3, 4, 3, 4, 3},
       '{0, 1, 4, 16, 18, 3, 4, 3, 4, 3}},
@@ -149,8 +146,7 @@ package snitch_cluster_cfg_pkg;
       '{0, 1, 4, 16, 18, 3, 4, 3, 4, 3}}
   };
 
-  localparam logic [3-1:0][4:0] SsrRegs [9] = '{
-    '{2, 1, 0},
+  localparam logic [3-1:0][4:0] SsrRegs [NrCores] = '{
     '{2, 1, 0},
     '{2, 1, 0},
     '{2, 1, 0},

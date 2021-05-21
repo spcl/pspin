@@ -76,7 +76,7 @@ module hpu_driver #(
     assign cluster_id = hart_id_i[31:CLUSTER_ID_WIDTH];
     assign core_id = hart_id_i[CLUSTER_ID_WIDTH-1:0];
 
-    assign can_send_feedback = no_dma_req_pending_i && no_pending_cmd;
+    assign can_send_feedback = 1'b1; /* FIX ME no_dma_req_pending_i && no_pending_cmd; */
     assign cmd_resp_valid = cmd_resp_valid_i && cmd_resp_i.cmd_id.cluster_id == cluster_id && cmd_resp_i.cmd_id.core_id == core_id;
 
     stream_demux #(
@@ -319,16 +319,17 @@ module task_frontend #(
         
     always_comb begin   
         core_resp_o.q_ready = 1'b0;
-        trigger_feedback_d = trigger_feedback_q;
         rdata_d = rdata_q;
         valid_d = (state_q != StallingResponse) ? 1'b0 : valid_q;
         handler_error_code = '0;
         handler_error = 1'b0;
 
+        trigger_feedback_d = ((state_q == Running && core_req_i.q_valid) || state_q == Idle) ? 1'b0 : trigger_feedback_q;
+
         if (state_q == Running && core_req_i.q_valid) begin
             core_resp_o.q_ready = 1'b1;
             valid_d = 1'b1;
-            trigger_feedback_d = 1'b0;
+            
 
             case (core_req_i.q.addr[7:0]) 
 
