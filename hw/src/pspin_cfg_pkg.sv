@@ -36,7 +36,7 @@ package automatic pspin_cfg_pkg;
   // Constants used for decoding HER info
   localparam int unsigned       C_SIZE_WIDTH                = 32;   
   localparam int unsigned       C_MSGID_WIDTH               = 10;
-  localparam int unsigned       C_ADDR_WIDTH                = 32;
+  localparam int unsigned       C_ADDR_WIDTH                = AXI_SOC_AW;
   localparam int unsigned       C_HOST_ADDR_WIDTH           = AXI_HOST_AW;
 
   // L1 organization
@@ -270,11 +270,11 @@ package automatic pspin_cfg_pkg;
 
   // Host <-> PsPIN DMA command (193 b, padded to 76 B)
   typedef struct packed {
-      logic [414:0] unused;     // 415b
+      logic [399:0] unused;     // 400b
       user_ptr_t    user_ptr;   // 64b
       logic         nic_to_host;// 1
       mem_size_t    length;     // 32b
-      mem_addr_t    nic_addr;   // 32b
+      mem_addr_t    nic_addr;   // 47b
       host_addr_t   host_addr;  // 64b
   } host_dma_cmd_t;
 

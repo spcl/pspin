@@ -355,8 +355,8 @@ module pspin_verilator
         .ni_wide_req_i          (ni_req),
         .ni_wide_resp_o         (ni_resp),
 
-        .nic_feedback_ready_i   (feedback_ready),
-        .nic_feedback_valid_o   (feedback_valid),
+        .nic_feedback_ready_i   (feedback_ready_i),
+        .nic_feedback_valid_o   (feedback_valid_o),
         .nic_feedback_o         (feedback),
 
         .nic_cmd_ready_i        (nic_cmd_req_ready_i),
