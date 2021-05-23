@@ -11,6 +11,7 @@ dependencies:
   tech_cells_generic: {path: deps/pulp_platform_tech_cells_generic}
   axi_riscv_atomics: {path: deps/pulp_platform_axi_riscv_atomics}
   snitch_cluster: {path: deps/pulp_platform_snitch_cluster/hw/ip/snitch_cluster}
+  future: {path: deps/pulp_platform_future}
 
 sources:
 # Level 0:
