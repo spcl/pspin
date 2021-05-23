@@ -145,7 +145,7 @@ namespace PsPIN
         uint8_t *feedback_valid_i;
         uint8_t *feedback_ready_o;
         uint16_t *feedback_msgid_i;
-        uint32_t *feedback_her_addr_i;
+        mem_addr_t *feedback_her_addr_i;
         uint32_t *feedback_her_size_i;
         uint8_t *eos_o;
     } ni_control_port_t;

@@ -27,7 +27,7 @@
 extern "C" {  
 #endif  
 
-typedef uint32_t mem_addr_t;
+typedef uint64_t mem_addr_t;
 typedef uint32_t mem_size_t;
 typedef uint64_t host_addr_t;
 
