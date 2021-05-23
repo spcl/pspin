@@ -174,7 +174,7 @@ module axi_to_mem_banked #(
   logic          [NumSlvPorts*2-1:0][BanksPerAxiChannel-1:0] inter_valid,   inter_ready;
 
   // axi_to_mem protocol converter
-  for (genvar i = 0; i < NumSlvPorts*2-1; i++) begin : gen_axi_to_mem
+  for (genvar i = 0; i < NumSlvPorts*2; i++) begin : gen_axi_to_mem
     axi_addr_t [BanksPerAxiChannel-1:0] req_addr;  // This is a byte address
     mem_data_t [BanksPerAxiChannel-1:0] req_wdata, res_rdata;
     mem_strb_t [BanksPerAxiChannel-1:0] req_wstrb;
