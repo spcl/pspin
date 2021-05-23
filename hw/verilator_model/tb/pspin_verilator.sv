@@ -341,7 +341,7 @@ module pspin_verilator
         .no_in_req_t (nic_wide_req_t),
         .no_in_resp_t (nic_wide_resp_t)
     ) i_pspin (
-        .clk_i                  (clk),
+        .clk_i                  (clk_i),
         .rst_ni                 (rst_ni),
         
         .host_wide_req_i        (host_in_req),
