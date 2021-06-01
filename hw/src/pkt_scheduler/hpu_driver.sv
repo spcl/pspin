@@ -9,17 +9,18 @@
 // specific language governing permissions and limitations under the License.
 
 module hpu_driver #(
-    parameter int   NUM_CLUSTERS          = 4,
-    parameter int   NUM_CMDS              = 4,
-    parameter int   CLUSTER_ID_WIDTH      = 16,
-    parameter int   CORE_ID_WIDTH         = 16,
-    parameter type  dreq_t                = logic,
-    parameter type  drsp_t                = logic,
-    parameter type  drsp_chan_t           = logic,
-    parameter type  hpu_handler_task_t    = logic,
-    parameter type  task_feedback_descr_t = logic,
-    parameter type  cmd_req_t             = logic,
-    parameter type  cmd_resp_t            = logic
+    parameter int unsigned  NUM_CLUSTERS          = 4,
+    parameter int unsigned NUM_CMDS              = 4,
+    parameter int unsigned CLUSTER_ID_WIDTH      = 16,
+    parameter int unsigned CORE_ID_WIDTH         = 16,
+    parameter int unsigned DATA_WIDTH            = 32,
+    parameter type         dreq_t                = logic,
+    parameter type         drsp_t                = logic,
+    parameter type         drsp_chan_t           = logic,
+    parameter type         hpu_handler_task_t    = logic,
+    parameter type         task_feedback_descr_t = logic,
+    parameter type         cmd_req_t             = logic,
+    parameter type         cmd_resp_t            = logic
 ) (
     input  logic                  clk_i,
     input  logic                  rst_ni,
@@ -109,6 +110,7 @@ module hpu_driver #(
         .NUM_CLUSTERS              (NUM_CLUSTERS),
         .CLUSTER_ID_WIDTH          (CLUSTER_ID_WIDTH),
         .CORE_ID_WIDTH             (CORE_ID_WIDTH),
+        .DATA_WIDTH                (DATA_WIDTH),
         .hpu_handler_task_t        (hpu_handler_task_t),
         .task_feedback_descr_t     (task_feedback_descr_t),
         .dreq_t                    (dreq_t),
@@ -169,6 +171,7 @@ module task_frontend #(
     parameter int unsigned NUM_CLUSTERS        = 4,
     parameter int unsigned CLUSTER_ID_WIDTH    = 16,
     parameter int unsigned CORE_ID_WIDTH       = 16,
+    parameter int unsigned DATA_WIDTH          = 32,
     parameter type hpu_handler_task_t          = logic,
     parameter type task_feedback_descr_t       = logic,
     parameter type  dreq_t                     = logic,
@@ -199,8 +202,11 @@ module task_frontend #(
     input  logic                       can_send_feedback_i
 );
 
+    localparam int unsigned DataAlign = $clog2(DATA_WIDTH/8);
+
     typedef enum logic [2:0] {Init, Idle, Running, StallingFeedback, StallingResponse} state_t;
     state_t state_d, state_q;
+    logic [DataAlign-1:0] offset_d, offset_q;
 
     hpu_handler_task_t current_task_q, current_task_d;
 
@@ -248,7 +254,7 @@ module task_frontend #(
 
     assign disable_commands_o = hpu_feedback_valid_o;
 
-    assign core_resp_o.p.data = rdata_q;
+    assign core_resp_o.p.data = rdata_q << {offset_q, 3'b000};
     assign core_resp_o.p_valid = valid_q;
     assign core_resp_o.p.error = 1'b0; /* FIX ME */
 
@@ -323,13 +329,14 @@ module task_frontend #(
         valid_d = (state_q != StallingResponse) ? 1'b0 : valid_q;
         handler_error_code = '0;
         handler_error = 1'b0;
+        offset_d = offset_q;
 
         trigger_feedback_d = ((state_q == Running && core_req_i.q_valid) || state_q == Idle) ? 1'b0 : trigger_feedback_q;
 
         if (state_q == Running && core_req_i.q_valid) begin
             core_resp_o.q_ready = 1'b1;
             valid_d = 1'b1;
-            
+            offset_d = core_req_i.q.addr[DataAlign-1:0];
 
             case (core_req_i.q.addr[7:0]) 
 
@@ -419,12 +426,14 @@ module task_frontend #(
             valid_q <= 1'b0;
             rdata_q <= '0;
             trigger_feedback_q <= 1'b0;
+            offset_q <= '0;
         end else begin
             state_q <= state_d;
             current_task_q <= current_task_d;
             valid_q <= valid_d;
             rdata_q <= rdata_d;
             trigger_feedback_q <= trigger_feedback_d;
+            offset_q <= offset_d;
         end
     end
     
