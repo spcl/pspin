@@ -9,7 +9,7 @@
 // specific language governing permissions and limitations under the License.
 
 module hpu_driver #(
-    parameter int unsigned  NUM_CLUSTERS          = 4,
+    parameter int unsigned NUM_CLUSTERS          = 4,
     parameter int unsigned NUM_CMDS              = 4,
     parameter int unsigned CLUSTER_ID_WIDTH      = 16,
     parameter int unsigned CORE_ID_WIDTH         = 16,
