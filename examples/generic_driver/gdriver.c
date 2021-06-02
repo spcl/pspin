@@ -233,7 +233,7 @@ int gdriver_init(int argc, char **argv, const char *hfile, const char *hh, const
 
     for (int i = 0; i < NUM_CLUSTERS; i++)
     {
-        sim_state.scratchpad_addr[i] = SCRATCHPAD_REL_ADDR;
+      sim_state.scratchpad_addr[i] = 0x10012400 + (i*4*1024*1024);
         sim_state.scratchpad_size[i] = SCRATCHPAD_SIZE;
     }
 
