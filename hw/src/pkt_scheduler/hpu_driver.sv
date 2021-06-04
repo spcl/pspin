@@ -72,6 +72,9 @@ module hpu_driver #(
     logic cmd_resp_valid;
     logic disable_commands;
 
+    drsp_chan_t rsp_mux_resp_chan;
+    logic rsp_mux_ready, rsp_mux_valid;
+
     assign frontend_select_d = (core_req_i.q_valid) ? core_req_i.q.addr[SelBitOffset] : frontend_select_q;
 
     assign cluster_id = hart_id_i[31:CLUSTER_ID_WIDTH];
@@ -93,17 +96,35 @@ module hpu_driver #(
     assign task_frontend_req.q = core_req_i.q;
     assign cmd_frontend_req.q = core_req_i.q;
 
+    stream_fifo #(
+        .FALL_THROUGH(1'b0),
+        .DEPTH(1),
+        .T(drsp_chan_t)
+    ) i_rsp_fifo (
+        .clk_i      (clk_i),      
+        .rst_ni     (rst_ni),     
+        .flush_i    (1'b0),    
+        .testmode_i (1'b0), 
+        .usage_o    (/*unconnected*/),    
+        .data_i     (rsp_mux_resp_chan),
+        .valid_i    (rsp_mux_valid),
+        .ready_o    (rsp_mux_ready),
+        .data_o     (core_resp_o.p), 
+        .valid_o    (core_resp_o.valid),
+        .ready_i    (core_req_i.ready) 
+    );
+
     stream_mux #(
         .DATA_T(drsp_chan_t),
         .N_INP(2)
     ) i_frontend_mux (
-        .inp_data_i     ( {cmd_frontend_resp.p,       task_frontend_resp.p       }),
-        .inp_valid_i    ( {cmd_frontend_resp.p_valid, task_frontend_resp.p_valid }),
-        .inp_ready_o    ( {cmd_frontend_req.p_ready,  task_frontend_req.p_ready  }),
-        .inp_sel_i      ( frontend_select_q                                       ),
-        .oup_data_o     ( core_resp_o.p                                           ),
-        .oup_valid_o    ( core_resp_o.p_valid                                     ),
-        .oup_ready_i    ( core_req_i.p_ready                                      )
+        .inp_data_i   ( {cmd_frontend_resp.p,       task_frontend_resp.p       }),
+        .inp_valid_i  ( {cmd_frontend_resp.p_valid, task_frontend_resp.p_valid }),
+        .inp_ready_o  ( {cmd_frontend_req.p_ready,  task_frontend_req.p_ready  }),
+        .inp_sel_i    ( frontend_select_q                                       ),
+        .oup_data_o   ( rsp_mux_resp_chan                                       ),
+        .oup_valid_o  ( rsp_mux_valid                                           ),
+        .oup_ready_i  ( rsp_mux_ready                                           )
     );    
 
     task_frontend #(
@@ -163,6 +184,13 @@ module hpu_driver #(
             frontend_select_q <= frontend_select_d;
         end
     end
+
+    // the resp fifo is assumed to be always free because the core won't issue a new request
+    // before ackwnloedging the response to the prev one. 
+    fifo_free : assert property(
+      @(posedge clk_i) (rsp_mux_valid) |-> (rsp_mux_ready))
+        else $fatal (1, "Got a new request while still trying to send the response to the previous one!");
+
 
 endmodule
 
