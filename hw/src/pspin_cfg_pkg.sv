@@ -63,10 +63,12 @@ package automatic pspin_cfg_pkg;
   //Number of command interfaces (NIC outbound, soc-level DMA) and IDs
   //NOTE: the IDs need to be consistent with the inputs of the cmd unit.
   localparam int unsigned       CMD_TYPE_WIDTH              = 8;
-  localparam int unsigned       NUM_CMD_INTERFACES          = 3;
+  localparam int unsigned       NUM_SOC_CMD_INTERFACES      = 3; //only the off-cluster ones
+  localparam int unsigned       NUM_CMD_INTERFACES          = 4;
   localparam int unsigned       CMD_HOSTDIRECT_ID           = 0;
   localparam int unsigned       CMD_NIC_OUTBOUND_ID         = 1;
   localparam int unsigned       CMD_EDMA_ID                 = 2;
+  localparam int unsigned       CMD_CDMA_ID                 = 3;
 
   // L2 sizing
   localparam int unsigned L2_HND_SIZE        = 32'h0040_0000;
@@ -271,13 +273,21 @@ package automatic pspin_cfg_pkg;
 
   // Host <-> PsPIN DMA command (193 b, padded to 76 B)
   typedef struct packed {
-      logic [398:0] unused;     // 389b
+      logic [398:0] unused;     // 399b
       user_ptr_t    user_ptr;   // 64b
       logic         nic_to_host;// 1
       mem_size_t    length;     // 32b
       mem_addr_t    nic_addr;   // 48b
       host_addr_t   host_addr;  // 64b
   } host_dma_cmd_t;
+
+  // L2 <-> L1 DMA command (193 b, padded to 76 B)
+  typedef struct packed {
+      logic [479:0] unused;     // 480b
+      mem_size_t    length;     // 32b
+      mem_addr_t    src_addr;   // 48b
+      mem_addr_t    dst_addr;   // 48b
+  } nic_dma_cmd_t;
 
   // PsPIN <-> Host with immediate data (586 b, padded to 76 B)
   typedef struct packed {
@@ -293,6 +303,7 @@ package automatic pspin_cfg_pkg;
       nic_cmd_t          nic_cmd;
       host_dma_cmd_t     host_dma_cmd;
       host_direct_cmd_t  host_direct_cmd;
+      nic_dma_cmd_t      nic_dma_cmd;
   } pspin_cmd_descr_t;
 
   typedef logic [CMD_TYPE_WIDTH-1:0] pspin_cmd_type_t;
@@ -307,6 +318,7 @@ package automatic pspin_cfg_pkg;
   typedef struct packed {
     pspin_cmd_intf_id_t intf_id;
     pspin_cmd_type_t cmd_type;
+    logic to_uncluster;
     pspin_cmd_id_t cmd_id;
     pspin_cmd_descr_t descr;
   } pspin_cmd_req_t;

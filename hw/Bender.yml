@@ -23,7 +23,7 @@ sources:
  - src/pkt_scheduler/cluster_rb.sv
  - src/soc_dma/soc_dma.sv
  - src/cmds/host_direct.sv
- - src/cmds/cmd_unit.sv
+ - src/cmds/cmd_xbar.sv
  - src/cmds/cluster_cmd.sv
  - src/hpu_driver/task_frontend.sv
  - src/hpu_driver/cmd_frontend.sv

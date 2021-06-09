@@ -10,45 +10,60 @@
 
 import pspin_cfg_pkg::*;
 
-module cmd_unit #(
-    parameter int unsigned NUM_CLUSTERS             = 4,
-    parameter int unsigned NUM_CMD_INTERFACES       = 2,
+module cmd_xbar #(
+    parameter bit CUT_SLV_PORTS                     = 0,
+    parameter int unsigned NUM_SLV_PORTS            = 4,
+    parameter int unsigned NUM_MST_PORTS            = 2,
     parameter int unsigned INTF_RESP_BUFF_SIZE      = 8,
     parameter type cmd_req_t                        = logic,
-    parameter type cmd_resp_t                       = logic
+    parameter type cmd_resp_t                       = logic,
+    /* do not override */
+    parameter type mst_port_id_t                    = logic [$clog2(NUM_MST_PORTS)-1:0]
 ) (
-    input logic                                         clk_i,
-    input logic                                         rst_ni,
+    input logic                                     clk_i,
+    input logic                                     rst_ni,
 
-    output logic [NUM_CLUSTERS-1:0]                     cmd_ready_o,
-    input  logic [NUM_CLUSTERS-1:0]                     cmd_valid_i,
-    input  cmd_req_t [NUM_CLUSTERS-1:0]                 cmd_i,
+    output logic [NUM_SLV_PORTS-1:0]                cmd_ready_o,
+    input  logic [NUM_SLV_PORTS-1:0]                cmd_valid_i,
+    input  cmd_req_t [NUM_SLV_PORTS-1:0]            cmd_i,
+    input  mst_port_id_t [NUM_SLV_PORTS-1:0]        cmd_intf_selector_i,
 
-    output logic                                        cmd_resp_valid_o,
-    output cmd_resp_t                                   cmd_resp_o,
+    output logic                                    cmd_resp_valid_o,
+    output cmd_resp_t                               cmd_resp_o,
 
-    input  logic [NUM_CMD_INTERFACES-1:0]               intf_ready_i,
-    output logic [NUM_CMD_INTERFACES-1:0]               intf_valid_o,
-    output cmd_req_t [NUM_CMD_INTERFACES-1:0]           intf_cmd_o,
+    input  logic [NUM_MST_PORTS-1:0]                intf_ready_i,
+    output logic [NUM_MST_PORTS-1:0]                intf_valid_o,
+    output cmd_req_t [NUM_MST_PORTS-1:0]            intf_cmd_o,
 
-    input  logic [NUM_CMD_INTERFACES-1:0]               intf_cmd_resp_valid_i,
-    input  cmd_resp_t [NUM_CMD_INTERFACES-1:0]          intf_cmd_resp_i
+    input  logic [NUM_MST_PORTS-1:0]                intf_cmd_resp_valid_i,
+    input  cmd_resp_t [NUM_MST_PORTS-1:0]           intf_cmd_resp_i
 );
 
-    /* spill registers from clusters */
-    logic [NUM_CLUSTERS-1:0] cluster_cmd_ready;
-    logic [NUM_CLUSTERS-1:0] cluster_cmd_valid;
-    cmd_req_t [NUM_CLUSTERS-1:0] cluster_cmd;
+    typedef struct packed {
+        cmd_req_t cmd_req;
+        mst_port_id_t intf_sel;
+    } cmd_req_descr_t;
 
-    for (genvar i=0; i<NUM_CLUSTERS; i++) begin : gen_cluster_spill_reg
+    /* spill registers from clusters */
+    logic [NUM_SLV_PORTS-1:0] cluster_cmd_ready;
+    logic [NUM_SLV_PORTS-1:0] cluster_cmd_valid;
+    cmd_req_descr_t [NUM_SLV_PORTS-1:0] cluster_cmd;
+
+    for (genvar i=0; i<NUM_SLV_PORTS; i++) begin : gen_cluster_spill_reg
+
+        cmd_req_descr_t inp_cmd;
+        assign inp_cmd.cmd_req = cmd_i[i];
+        assign inp_cmd.intf_sel = cmd_intf_selector_i[i];
+
         spill_register #(
-            .T       (cmd_req_t)
+            .T       (cmd_req_descr_t),
+            .Bypass  (~CUT_SLV_PORTS)
         ) i_cluster_cmd_spill (
             .clk_i   (clk_i),
             .rst_ni  (rst_ni),
             .valid_i (cmd_valid_i[i]),
             .ready_o (cmd_ready_o[i]),
-            .data_i  (cmd_i[i]),
+            .data_i  (inp_cmd),
             .valid_o (cluster_cmd_valid[i]),
             .ready_i (cluster_cmd_ready[i]),
             .data_o  (cluster_cmd[i])
@@ -56,44 +71,44 @@ module cmd_unit #(
     end
 
     /* stream demux */
-    logic [NUM_CLUSTERS-1:0][NUM_CMD_INTERFACES-1:0] intf_demux_valid;
-    logic [NUM_CLUSTERS-1:0][NUM_CMD_INTERFACES-1:0] intf_demux_ready;
+    logic [NUM_SLV_PORTS-1:0][NUM_MST_PORTS-1:0] intf_demux_valid;
+    logic [NUM_SLV_PORTS-1:0][NUM_MST_PORTS-1:0] intf_demux_ready;
 
-    for (genvar i=0; i<NUM_CLUSTERS; i++) begin : gen_cluster_stream_demux
+    for (genvar i=0; i<NUM_SLV_PORTS; i++) begin : gen_cluster_stream_demux
         stream_demux #(
-            .N_OUP          (NUM_CMD_INTERFACES)
+            .N_OUP          (NUM_MST_PORTS)
         ) i_stream_demux_cluster_cmd (
             .inp_valid_i    (cluster_cmd_valid[i]),
             .inp_ready_o    (cluster_cmd_ready[i]),
-            .oup_sel_i      (cluster_cmd[i].intf_id),
+            .oup_sel_i      (cluster_cmd[i].intf_sel),
             .oup_valid_o    (intf_demux_valid[i]),
             .oup_ready_i    (intf_demux_ready[i])
         );
     end
 
     /* cross wires */
-    logic [NUM_CMD_INTERFACES-1:0][NUM_CLUSTERS-1:0] intf_mux_valid;
-    logic [NUM_CMD_INTERFACES-1:0][NUM_CLUSTERS-1:0] intf_mux_ready;
+    logic [NUM_MST_PORTS-1:0][NUM_SLV_PORTS-1:0] intf_mux_valid;
+    logic [NUM_MST_PORTS-1:0][NUM_SLV_PORTS-1:0] intf_mux_ready;
 
-    for (genvar i=0; i<NUM_CMD_INTERFACES; i++) begin: gen_xbar_l1
-        for (genvar j=0; j<NUM_CLUSTERS; j++) begin: gen_xbar_l2
+    for (genvar i=0; i<NUM_MST_PORTS; i++) begin: gen_xbar_l1
+        for (genvar j=0; j<NUM_SLV_PORTS; j++) begin: gen_xbar_l2
             assign intf_mux_valid[i][j] = intf_demux_valid[j][i];
             assign intf_demux_ready[j][i] = intf_mux_ready[i][j];
         end
     end
 
     /* round robin on interfaces */
-    logic [NUM_CMD_INTERFACES-1:0] cmd_arb_ready;
-    logic [NUM_CMD_INTERFACES-1:0] cmd_arb_valid;
-    cmd_req_t [NUM_CMD_INTERFACES-1:0] cmd_arb_cmd;
+    logic [NUM_MST_PORTS-1:0] cmd_arb_ready;
+    logic [NUM_MST_PORTS-1:0] cmd_arb_valid;
+    cmd_req_descr_t [NUM_MST_PORTS-1:0] cmd_arb_cmd;
 
-    logic [NUM_CMD_INTERFACES-1:0] fifo_in_flight_req_has_space;
+    logic [NUM_MST_PORTS-1:0] fifo_in_flight_req_has_space;
 
-    for (genvar i=0; i<NUM_CMD_INTERFACES; i++) begin: gen_rr_arb
+    for (genvar i=0; i<NUM_MST_PORTS; i++) begin: gen_rr_arb
         // select a cluster to serve
         rr_arb_tree #(
-            .NumIn      (NUM_CLUSTERS),
-            .DataType   (cmd_req_t),
+            .NumIn      (NUM_SLV_PORTS),
+            .DataType   (cmd_req_descr_t),
             .ExtPrio    (0),
             .AxiVldRdy  (1),
             .LockIn     (1)
@@ -113,25 +128,25 @@ module cmd_unit #(
 
         assign intf_valid_o[i]  = cmd_arb_valid[i] && fifo_in_flight_req_has_space[i];
         assign cmd_arb_ready[i] = intf_ready_i[i] && fifo_in_flight_req_has_space[i];
-        assign intf_cmd_o[i]    = cmd_arb_cmd[i];
+        assign intf_cmd_o[i]    = cmd_arb_cmd[i].cmd_req;
     end
 
     /* in flight requests fifo & response buffer */
-    logic [NUM_CMD_INTERFACES-1:0] fifo_in_flight_req_pop;
-    logic [NUM_CMD_INTERFACES-1:0] fifo_in_flight_req_push;
-    logic [NUM_CMD_INTERFACES-1:0][$clog2(INTF_RESP_BUFF_SIZE)-1:0] fifo_in_flight_req_usage;
-    logic [NUM_CMD_INTERFACES-1:0] fifo_resp_buffer_pop;
-    logic [NUM_CMD_INTERFACES-1:0] fifo_resp_buffer_push;
-    logic [NUM_CMD_INTERFACES-1:0] fifo_resp_buffer_empty;
-    logic [NUM_CMD_INTERFACES-1:0] fifo_resp_buffer_valid;
-    logic [NUM_CMD_INTERFACES-1:0] fifo_resp_buffer_ready;
+    logic [NUM_MST_PORTS-1:0] fifo_in_flight_req_pop;
+    logic [NUM_MST_PORTS-1:0] fifo_in_flight_req_push;
+    logic [NUM_MST_PORTS-1:0][$clog2(INTF_RESP_BUFF_SIZE)-1:0] fifo_in_flight_req_usage;
+    logic [NUM_MST_PORTS-1:0] fifo_resp_buffer_pop;
+    logic [NUM_MST_PORTS-1:0] fifo_resp_buffer_push;
+    logic [NUM_MST_PORTS-1:0] fifo_resp_buffer_empty;
+    logic [NUM_MST_PORTS-1:0] fifo_resp_buffer_valid;
+    logic [NUM_MST_PORTS-1:0] fifo_resp_buffer_ready;
 
-    cmd_resp_t [NUM_CMD_INTERFACES-1:0] fifo_resp_buffer_data;
+    cmd_resp_t [NUM_MST_PORTS-1:0] fifo_resp_buffer_data;
 
     cmd_resp_t resp_arb_data;
     logic resp_arb_valid;
 
-    for (genvar i=0; i<NUM_CMD_INTERFACES; i++) begin: gen_fifo_req
+    for (genvar i=0; i<NUM_MST_PORTS; i++) begin: gen_fifo_req
         fifo_v3 #(
             .dtype     (logic),
             .DEPTH     (INTF_RESP_BUFF_SIZE)
@@ -154,7 +169,7 @@ module cmd_unit #(
         assign fifo_in_flight_req_has_space[i]  = fifo_in_flight_req_usage[i] < INTF_RESP_BUFF_SIZE - 1;
     end
 
-    for (genvar i=0; i<NUM_CMD_INTERFACES; i++) begin: gen_fifo_resp
+    for (genvar i=0; i<NUM_MST_PORTS; i++) begin: gen_fifo_resp
         fifo_v3 #(
             .dtype     (cmd_resp_t),
             .DEPTH     (INTF_RESP_BUFF_SIZE)
@@ -178,7 +193,7 @@ module cmd_unit #(
     end
 
     rr_arb_tree #(
-        .NumIn      (NUM_CMD_INTERFACES),
+        .NumIn      (NUM_MST_PORTS),
         .DataType   (cmd_resp_t),
         .ExtPrio    (0),
         .AxiVldRdy  (1),
@@ -199,7 +214,8 @@ module cmd_unit #(
 
     /* spill register to clusters */
     spill_register #(
-        .T(cmd_resp_t)
+        .T(cmd_resp_t),
+        .Bypass(~CUT_SLV_PORTS)
     ) i_cluster_cmd_resp_spill (
         .clk_i   (clk_i),
         .rst_ni  (rst_ni),

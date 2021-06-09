@@ -153,6 +153,7 @@ module pspin
   logic [NUM_CLUSTERS-1:0]                          cluster_cmd_ready;
   logic [NUM_CLUSTERS-1:0]                          cluster_cmd_valid;
   pspin_cmd_req_t [NUM_CLUSTERS-1:0]                cluster_cmd;
+  pspin_cmd_intf_id_t [NUM_CLUSTERS-1:0]            cluster_cmd_intf_selector;
 
   // command unit -> clusters
   logic                                             cluster_cmd_resp_valid;
@@ -374,12 +375,17 @@ module pspin
   // Command unit (dispatches commands) //
   //************************************//
   
-  cmd_unit #(
-    .NUM_CLUSTERS                (NUM_CLUSTERS),
-    .NUM_CMD_INTERFACES          (NUM_CMD_INTERFACES),
+  for (genvar i = 0; i < NUM_CLUSTERS; i++) begin : gen_cmds_selector
+    assign cluster_cmd_intf_selector[i] = cluster_cmd[i].intf_id;
+  end
+
+  cmd_xbar #(
+    .CUT_SLV_PORTS               (1'b1),
+    .NUM_SLV_PORTS               (NUM_CLUSTERS),
+    .NUM_MST_PORTS               (NUM_SOC_CMD_INTERFACES),
     .cmd_req_t                   (pspin_cmd_req_t),
     .cmd_resp_t                  (pspin_cmd_resp_t)
-  ) i_cmd_unit (
+  ) i_cmd_xbar (
     .rst_ni                      (rst_ni),
     .clk_i                       (clk_i),
 
@@ -387,6 +393,7 @@ module pspin
     .cmd_ready_o                 (cluster_cmd_ready),
     .cmd_valid_i                 (cluster_cmd_valid),
     .cmd_i                       (cluster_cmd),
+    .cmd_intf_selector_i         (cluster_cmd_intf_selector),
 
     //command responses to clusters
     .cmd_resp_valid_o            (cluster_cmd_resp_valid),

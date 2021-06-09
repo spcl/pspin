@@ -44,9 +44,6 @@ module hpu_driver #(
     input  dreq_t                 core_req_i,
     output drsp_t                 core_resp_o,
 
-    //high if this core has no pending DMA requests
-    input logic                   no_dma_req_pending_i,
-
     //command out
     input  logic                  cmd_ready_i,
     output logic                  cmd_valid_o,

@@ -262,8 +262,13 @@ module cmd_frontend #(
                         core_resp_valid = 1'b1;
                     end
                     else if (add_idx == 4) begin /* CMD HEADER */ 
-                        new_cmd_req_d.cmd_type = core_req_i_data_shifted[31:16];
-                        new_cmd_req_d.intf_id = core_req_i_data_shifted[15:0];
+                        // FORMAT:
+                        //   - 31:15 (16 bit): command type
+                        //   - 14:14 (1 bit):  command targets an off-cluster command unit
+                        //   - 13:0  (15 bit): interface ID
+                        new_cmd_req_d.cmd_type = core_req_i_data_shifted[31:15];
+                        new_cmd_req_d.to_uncluster = ~core_req_i_data_shifted[14];
+                        new_cmd_req_d.intf_id = core_req_i_data_shifted[13:0];
                         core_resp_valid = 1'b1;
                     end
                     else if (add_idx >= 5 && add_idx <= 11) begin  /* CMD DESCRIPTOR */
