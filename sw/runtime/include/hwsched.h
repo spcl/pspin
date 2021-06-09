@@ -37,16 +37,17 @@
 #define HWSCHED_ERROR                0x1B205054
 
 #define CMD_ISSUE   0x1B205080
-#define CMD_WAIT    0x1B205084
+#define CMD_ID_READ 0x1B205084
 #define CMD_TEST    0x1B205088
-#define CMD_INFO    0x1B20508C
-#define CMD_WORD0   0x1B205090
-#define CMD_WORD1   0x1B205094
-#define CMD_WORD2   0x1B205098
-#define CMD_WORD3   0x1B20509C
-#define CMD_WORD4   0x1B2050A0
-#define CMD_WORD5   0x1B2050A4
-#define CMD_WORD6   0x1B2050A8
+#define CMD_WAIT    0x1B20508C
+#define CMD_INFO    0x1B205090
+#define CMD_WORD0   0x1B205094
+#define CMD_WORD1   0x1B205098
+#define CMD_WORD2   0x1B20509C
+#define CMD_WORD3   0x1B2050A0
+#define CMD_WORD4   0x1B2050A4
+#define CMD_WORD5   0x1B2050A8
+#define CMD_WORD6   0x1B2050AC
 
 #define MMIO_READ(X) (*((uint32_t volatile*) (X)))
 #define MMIO_WRITE(X, V) (*((uint32_t volatile*) (X)) = V)

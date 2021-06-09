@@ -28,6 +28,10 @@
 #define SPIN_OK 0x0
 #define SPIN_FAIL 0x1
 
+#define SPIN_CMD_INTF_HDIR  0
+#define SPIN_CMD_INTF_NO    1
+#define SPIN_CMD_INTF_EDMA  2
+#define SPIN_CMD_INTF_CDMA  3
 
 #define GET_IP_UDP_PLD(pkt_ptr, pkt_pld_ptr, pkt_pld_len)                           \
 {                                                                                   \
@@ -166,7 +170,8 @@ static inline int spin_rw_lock_w_unlock(spin_rw_lock_t *rwlock)
 typedef uint32_t spin_cmd_t;
 static inline int spin_cmd_wait(spin_cmd_t handle) 
 {
-    MMIO_WRITE(CMD_WAIT, handle);
+    MMIO_WRITE(CMD_TEST, handle);
+    MMIO_READ(CMD_WAIT);
     return SPIN_OK;
 }
 
@@ -181,21 +186,22 @@ static inline int spin_rdma_put(uint32_t dest, void *data, uint32_t length, spin
 {
     uint32_t fid = 1 /* >1 is RDMA */;
     uint32_t src_addr_high = 0;
-    uint32_t cmd_info = 2;
+    uint32_t cmd_info = SPIN_CMD_INTF_NO;
     //length, src_addr_low, src_addr_high, fid, nid
-    uint32_t res;
+    uint32_t res, cmd_id;
     uint32_t base_addr = 0x1b205000;
-    asm volatile(" sw      %2, 144(%1);  \
-                   sw      %3, 148(%1);  \
-                   sw      %5, 152(%1);  \
-                   sw      %4, 156(%1);  \
-                   sw      %6, 160(%1);  \
-                   sw      %7, 140(%1);  \
-                   lw      %0, 128(%1);  \
-    " : "=r"(res) : "r"(base_addr), "r"(dest), "r"(fid), "r"(src_addr_high), "r"((uint32_t)data), "r"(length), "r"(cmd_info));       
+    asm volatile(" sw      %3, 148(%2);  \
+                   sw      %4, 152(%2);  \
+                   sw      %6, 156(%2);  \
+                   sw      %5, 160(%2);  \
+                   sw      %7, 164(%2);  \
+                   sw      %8, 144(%2);  \
+                   lw      %0, 128(%2);  \
+                   lw      %1, 132(%2);  \
+    " : "=r"(res), "=r"(cmd_id) : "r"(base_addr), "r"(dest), "r"(fid), "r"(src_addr_high), "r"((uint32_t)data), "r"(length), "r"(cmd_info));       
     
-    *handle = res;
-    return SPIN_OK;
+    *handle = cmd_id;
+    return res;
 }
 
 static inline int spin_send_packet(void *data, uint32_t length, spin_cmd_t *handle)

@@ -62,6 +62,7 @@ package automatic pspin_cfg_pkg;
 
   //Number of command interfaces (NIC outbound, soc-level DMA) and IDs
   //NOTE: the IDs need to be consistent with the inputs of the cmd unit.
+  localparam int unsigned       CMD_TYPE_WIDTH              = 8;
   localparam int unsigned       NUM_CMD_INTERFACES          = 3;
   localparam int unsigned       CMD_HOSTDIRECT_ID           = 0;
   localparam int unsigned       CMD_NIC_OUTBOUND_ID         = 1;
@@ -294,7 +295,7 @@ package automatic pspin_cfg_pkg;
       host_direct_cmd_t  host_direct_cmd;
   } pspin_cmd_descr_t;
 
-  typedef enum logic [1:0] {HostMemCpy, NICSend, HostDirect} pspin_cmd_type_t;
+  typedef logic [CMD_TYPE_WIDTH-1:0] pspin_cmd_type_t;
   typedef logic [$clog2(NUM_CMD_INTERFACES)-1:0] pspin_cmd_intf_id_t;
 
   typedef struct packed {
@@ -305,17 +306,14 @@ package automatic pspin_cfg_pkg;
 
   typedef struct packed {
     pspin_cmd_intf_id_t intf_id;
+    pspin_cmd_type_t cmd_type;
     pspin_cmd_id_t cmd_id;
-    pspin_cmd_type_t  cmd_type;
     pspin_cmd_descr_t descr;
-
-    logic       generate_event;
   } pspin_cmd_req_t;
 
   typedef struct packed {
      pspin_cmd_id_t cmd_id;
-     logic [AXI_WIDE_DW-1:0] imm_data;
+     //logic [AXI_WIDE_DW-1:0] imm_data;
   } pspin_cmd_resp_t;
-
 
 endpackage

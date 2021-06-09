@@ -25,6 +25,8 @@ sources:
  - src/cmds/host_direct.sv
  - src/cmds/cmd_unit.sv
  - src/cmds/cluster_cmd.sv
+ - src/hpu_driver/task_frontend.sv
+ - src/hpu_driver/cmd_frontend.sv
 # Level 2:
  - src/interconnects/cluster_noc.sv
  - src/interconnects/dma_noc.sv
@@ -35,7 +37,7 @@ sources:
  - src/memories/l2_mem.sv
  - src/memories/prog_mem.sv
  - src/pkt_scheduler/cluster_scheduler.sv
- - src/pkt_scheduler/hpu_driver.sv
+ - src/hpu_driver/hpu_driver.sv
  - src/pkt_scheduler/mpq_engine.sv
  - src/pkt_scheduler/scheduler.sv
  - src/soc_dma/soc_dma_wrap.sv
@@ -47,6 +49,7 @@ sources:
      # Level 0 
      - modelsim_model/src/clk_rst_gen.sv
      - modelsim_model/src/pspin_tb_cfg_pkg.sv
+     - modelsim_model/src/cmd_sink.sv
      # Level 1
      - modelsim_model/src/packet_generator.sv
      # Level 3

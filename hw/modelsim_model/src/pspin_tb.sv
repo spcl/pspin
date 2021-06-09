@@ -121,6 +121,21 @@ module pspin_tb #();
         .pspin_active_o         (pspin_active)
     );
 
+    cmd_sink #(
+        .BUFF_SIZE(4),
+        .LATENCY(10),
+        .cmd_req_t(pspin_cfg_pkg::pspin_cmd_req_t),
+        .cmd_resp_t(pspin_cfg_pkg::pspin_cmd_resp_t)
+    ) i_no_sink (
+        .clk_i              (clk),
+        .rst_ni             (rst_n),
+        .cmd_ready_o        (nic_cmd_ready),
+        .cmd_valid_i        (nic_cmd_valid),
+        .cmd_i              (nic_cmd),
+        .cmd_resp_valid_o   (nic_cmd_resp_valid),
+        .cmd_resp_o         (nic_cmd_resp)
+    );
+
     initial begin
         $display("init!");
         wait (rst_n);
