@@ -262,24 +262,27 @@ package automatic pspin_cfg_pkg;
   // userptr
   typedef logic [63:0] user_ptr_t;
 
-  //NIC put/send command (224 b, padded to 76 B)
+  //NIC put/send command 
+  //TODO: this seems off -> recheck! 
+  //(e.g., no indication if src_addr is NIC or host memory, NIC memory is assumed now)
   typedef struct packed {
       logic [383:0] unused;     // 384b
       user_ptr_t    user_ptr;   // 64b
-      mem_size_t    length;     // 32b
-      host_addr_t   src_addr;   // 64b
       fid_t         fid;        // 32b unused
       nid_t         nid;        // 32b
+      mem_size_t    length;     // 32b
+      host_addr_t   src_addr;   // 64b
   } nic_cmd_t;
 
-  // Host <-> PsPIN DMA command (193 b, padded to 76 B)
+  // Host <-> PsPIN DMA command 
   typedef struct packed {
-      logic [398:0] unused;     // 399b
-      user_ptr_t    user_ptr;   // 64b
-      logic         nic_to_host;// 1
-      mem_size_t    length;     // 32b
-      mem_addr_t    nic_addr;   // 48b
-      host_addr_t   host_addr;  // 64b
+      logic [382:0]  unused;        // 383b
+      user_ptr_t     user_ptr;      // 64b
+      logic          nic_to_host;   // 1
+      mem_size_t     length;        // 32b
+      mem_addr_pad_t nic_addr_pad;  // 16b
+      mem_addr_t     nic_addr;      // 48b
+      host_addr_t    host_addr;     // 64b
   } host_dma_cmd_t;
 
   // L2 <-> L1 DMA command 
@@ -292,7 +295,7 @@ package automatic pspin_cfg_pkg;
       mem_addr_t     src_addr;   // 48b
   } nic_dma_cmd_t;
 
-  // PsPIN <-> Host with immediate data (586 b, padded to 76 B)
+  // PsPIN <-> Host with immediate data 
   typedef struct packed {
     logic [AXI_WIDE_DW-1:0]               imm_data;       // 512b
     logic [21:0]                          unused;         // 22b

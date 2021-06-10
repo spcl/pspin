@@ -33,6 +33,9 @@
 #define SPIN_CMD_INTF_EDMA  0x00000002
 #define SPIN_CMD_INTF_CDMA  0x00004000
 
+#define HOST_TO_NIC 0
+#define NIC_TO_HOST 1
+
 #define GET_IP_UDP_PLD(pkt_ptr, pkt_pld_ptr, pkt_pld_len)                           \
 {                                                                                   \
     ip_hdr_t *ip_hdr = (ip_hdr_t*) (pkt_ptr);                                       \
@@ -82,13 +85,12 @@ typedef struct handler_args
 
 typedef void (*handler_fn)(handler_args_t*);
 
-//typedef dma_t spin_dma_t;
-
 typedef struct spin_rw_lock {
     spin_lock_t glock;
     volatile int32_t num_readers;
 } spin_rw_lock_t;
 
+typedef uint32_t spin_cmd_t;
 
 /** Locks **/
 
@@ -147,8 +149,6 @@ static inline int spin_rw_lock_w_unlock(spin_rw_lock_t *rwlock)
     return SPIN_OK;
 }
 
-
-typedef uint32_t spin_cmd_t;
 static inline int spin_cmd_wait(spin_cmd_t handle) 
 {
     MMIO_WRITE(CMD_TEST, handle);
@@ -182,100 +182,72 @@ static inline int spin_nic_dma(void *src, void* dst, uint32_t length, spin_cmd_t
     return res;
 }
 
-static inline int spin_rdma_put(uint32_t dest, void *data, uint32_t length, spin_cmd_t *handle)
+static inline int spin_nic_rdma_put(uint32_t dest, void *data, uint32_t length, spin_cmd_t *handle)
 {
     uint32_t fid = 1 /* >1 is RDMA */;
-    uint32_t src_addr_high = 0;
     uint32_t cmd_info = SPIN_CMD_INTF_NO;
     //length, src_addr_low, src_addr_high, fid, nid
     uint32_t res, cmd_id;
     uint32_t base_addr = 0x1b205000;
-    asm volatile(" sw      %3, 148(%2);  \
-                   sw      %4, 152(%2);  \
+    asm volatile(" sw      %5, 148(%2);  \
+                   sw      x0, 152(%2);  \
                    sw      %6, 156(%2);  \
-                   sw      %5, 160(%2);  \
-                   sw      %7, 164(%2);  \
-                   sw      %8, 144(%2);  \
+                   sw      %4, 160(%2);  \
+                   sw      %3, 164(%2);  \
+                   sw      %7, 144(%2);  \
                    lw      %0, 128(%2);  \
                    lw      %1, 132(%2);  \
-    " : "=r"(res), "=r"(cmd_id) : "r"(base_addr), "r"(dest), "r"(fid), "r"(src_addr_high), "r"((uint32_t)data), "r"(length), "r"(cmd_info));       
+    " : "=r"(res), "=r"(cmd_id) : "r"(base_addr), "r"(dest), "r"(fid), "r"((uint32_t)data), "r"(length), "r"(cmd_info));       
     
     *handle = cmd_id;
     return res;
 }
 
-static inline int spin_send_packet(void *data, uint32_t length, spin_cmd_t *handle)
+static inline int spin_nic_packet_send(void *pkt_ptr, uint32_t length, spin_cmd_t *handle)
 {
     uint32_t dest = 0;
     uint32_t fid = 0 /* fid is used as QP ID. fid=0 -> no QP, it's raw data */;
-    uint32_t src_addr_high = 0;
-    uint32_t cmd_info = 2;
-    //length, src_addr_low, src_addr_high, fid, nid
-    uint32_t res;
+    uint32_t cmd_info = SPIN_CMD_INTF_NO;
+    uint32_t res, cmd_id;
     uint32_t base_addr = 0x1b205000;
-    asm volatile(" sw      %2, 144(%1);  \
-                   sw      %3, 148(%1);  \
-                   sw      %5, 152(%1);  \
-                   sw      %4, 156(%1);  \
-                   sw      %6, 160(%1);  \
-                   sw      %7, 140(%1);  \
-                   lw      %0, 128(%1);  \
-    " : "=r"(res) : "r"(base_addr), "r"(dest), "r"(fid), "r"(src_addr_high), "r"((uint32_t)data), "r"(length), "r"(cmd_info));       
+    asm volatile(" sw      %5, 148(%2);  \
+                   sw      x0, 152(%2);  \
+                   sw      %6, 156(%2);  \
+                   sw      %4, 160(%2);  \
+                   sw      %3, 164(%2);  \
+                   sw      %7, 144(%2);  \
+                   lw      %0, 128(%2);  \
+                   lw      %1, 132(%2);  \
+    " : "=r"(res), "=r"(cmd_id) : "r"(base_addr), "r"(dest), "r"(fid), "r"((uint32_t)pkt_ptr), "r"(length), "r"(cmd_info));       
     
-    *handle = res;
-    return SPIN_OK;
+    *handle = cmd_id;
+    return res;
 }
 
-static inline int spin_dma_to_host(uint64_t host_addr, uint32_t nic_addr, uint32_t length, bool generate_event, spin_cmd_t *xfer)
+// direction: HOST_TO_NIC or NIC_TO_HOST
+static inline int spin_host_dma(uint64_t host_addr, uint32_t nic_addr, uint8_t direction, uint32_t length, spin_cmd_t *xfer)
 {
     uint32_t host_address_high = (uint32_t) (host_addr >> 32);
     uint32_t host_address_low = (uint32_t) host_addr;
-    uint32_t direction = 1; //NIC -> host
-    uint32_t cmd_info = (uint8_t) generate_event;
-
-    //length, src_addr_low, src_addr_high, fid, nid
-    uint32_t res;
+    uint32_t cmd_info = 0;
+    uint32_t res, cmd_id;
     uint32_t base_addr = 0x1b205000;
-    asm volatile(" sw      %2, 148(%1);  \
-                   sw      %3, 144(%1);  \
-                   sw      %4, 152(%1);  \
-                   sw      %5, 156(%1);  \
-                   sw      %6, 160(%1);  \
-                   sw      %7, 140(%1);  \
-                   lw      %0, 128(%1);  \
-    " : "=r"(res) : "r"(base_addr), "r"(host_address_high), "r"(host_address_low), "r"(nic_addr), "r"(length), "r"(direction), "r"(cmd_info));       
+    asm volatile(" sw      %3, 148(%2);  \
+                   sw      %4, 144(%2);  \
+                   sw      %5, 152(%2);  \
+                   sw      %0, 156(%2);  \
+                   sw      %6, 160(%2);  \
+                   sw      %7, 164(%2);  \
+                   sw      %8, 144(%2);  \
+                   lw      %0, 128(%2);  \
+                   lw      %1, 132(%2);  \
+    " : "=r"(res), "=r"(cmd_id) : "r"(base_addr), "r"(host_address_high), "r"(host_address_low), "r"(nic_addr), "r"(length), "r"(direction), "r"(cmd_info));       
     
-    *xfer = res;
-    return SPIN_OK;
+    *xfer = cmd_id;
+    return res;
 }
 
-static inline int spin_dma_from_host(uint64_t host_addr, uint32_t nic_addr, uint32_t length, bool generate_event, spin_cmd_t *xfer)
-{
-    uint32_t host_address_high = (uint32_t) (host_addr >> 32);
-    uint32_t host_address_low = (uint32_t) host_addr;
-    uint32_t direction = 0; //host -> NIC
-    uint32_t cmd_info = (uint8_t) generate_event;
-
-    //length, src_addr_low, src_addr_high, fid, nid
-    uint32_t res;
-    uint32_t base_addr = 0x1b205000;
-    asm volatile(" sw      %2, 148(%1);  \
-                   sw      %3, 144(%1);  \
-                   sw      %4, 152(%1);  \
-                   sw      %5, 156(%1);  \
-                   sw      %6, 160(%1);  \
-                   sw      %7, 140(%1);  \
-                   lw      %0, 128(%1);  \
-    " : "=r"(res) : "r"(base_addr), "r"(host_address_high), "r"(host_address_low), "r"(nic_addr), "r"(length), "r"(direction), "r"(cmd_info));       
-    
-    *xfer = res;
-    return SPIN_OK;
-}
-
-// spin_host_write is deprecated. Use spin_write_to_host instead! 
-#define spin_host_write spin_write_to_host
-
-static inline int spin_write_to_host(uint64_t host_addr, uint64_t user_data, spin_cmd_t *xfer) 
+static inline int spin_host_write(uint64_t host_addr, uint64_t user_data, spin_cmd_t *xfer) 
 {
     uint32_t host_address_high = (uint32_t) (host_addr >> 32);
     uint32_t host_address_low = (uint32_t) host_addr;
@@ -286,19 +258,20 @@ static inline int spin_write_to_host(uint64_t host_addr, uint64_t user_data, spi
     uint32_t size_and_direction = (0x8 << 1) | 0x1; // 8 bytes NIC -> host
     uint32_t cmd_info = (uint8_t) 4;
 
-    uint32_t res;
+    uint32_t res, cmd_id;
     uint32_t base_addr = 0x1b205000;
-    asm volatile(" sw      %2, 148(%1);  \
-                   sw      %3, 144(%1);  \
-                   sw      %4, 152(%1);  \
-                   sw      %6, 156(%1);  \
-                   sw      %5, 160(%1);  \
-                   sw      %7, 140(%1);  \
-                   lw      %0, 128(%1);  \
-    " : "=r"(res) : "r"(base_addr), "r"(host_address_high), "r"(host_address_low), "r"(size_and_direction), "r"(data_high), "r"(data_low), "r"(cmd_info));       
+    asm volatile(" sw      %3, 148(%2);  \
+                   sw      %4, 144(%2);  \
+                   sw      %5, 152(%2);  \
+                   sw      %7, 156(%2);  \
+                   sw      %6, 160(%2);  \
+                   sw      %8, 144(%2);  \
+                   lw      %0, 128(%2);  \
+                   lw      %1, 132(%2);  \
+    " : "=r"(res), "=r"(cmd_id) : "r"(base_addr), "r"(host_address_high), "r"(host_address_low), "r"(size_and_direction), "r"(data_high), "r"(data_low), "r"(cmd_info));       
 
-    *xfer = res;
-    return SPIN_OK;
+    *xfer = cmd_id;
+    return res;
 }
 
 //this function is only needed to avoid the compiler stripping away the handler functions (we don't reference them
