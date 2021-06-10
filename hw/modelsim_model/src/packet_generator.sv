@@ -17,6 +17,7 @@ module packet_generator #(
   parameter time TT = 0ps,
   parameter int TOT_NUM_CORES = 32,
   parameter int NUM_CLUSTERS = 4,
+  parameter longint unsigned PKT_MEM_START = 0,
   parameter int unsigned Verbosity = 0,
   parameter int N_MPQ = 0,
   parameter int PKT_MEM_SIZE = 4*1024*1024 // [B]
@@ -134,7 +135,7 @@ module packet_generator #(
       end
     end
     // Reset write pointer.
-    write_ptr = 0;
+    write_ptr = PKT_MEM_START;
     wait (rst_ni);
 
     wait (can_start);

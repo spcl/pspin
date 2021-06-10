@@ -15,6 +15,8 @@
 module pspin 
   import pspin_cfg_pkg::*;
 #(
+  // L2 simulation initial value
+  parameter                               L2_SIM_INIT       = "skip", // "skip", "zeros", "ones", "random"
   // AXI interfaces
   parameter type                          host_in_req_t     = logic,
   parameter type                          host_in_resp_t    = logic,
@@ -268,7 +270,8 @@ module pspin
     .N_BYTES        (L2_HND_SIZE),
     .CUT_DW         (L2_HND_CUT_DW),
     .CUT_N_WORDS    (L2_HND_CUT_N_WORDS),
-    .N_PAR_CUTS     (L2_HND_N_PAR_CUTS)
+    .N_PAR_CUTS     (L2_HND_N_PAR_CUTS),
+    .SIM_INIT       (L2_SIM_INIT)
   ) i_l2_hnd_mem (
     .clk_i          ( clk_i                 ),
     .rst_ni         ( rst_ni                ),
@@ -302,7 +305,8 @@ module pspin
     .N_BYTES        (L2_PKT_SIZE),
     .CUT_DW         (L2_PKT_CUT_DW),
     .CUT_N_WORDS    (L2_PKT_CUT_N_WORDS),
-    .N_PAR_CUTS     (L2_PKT_N_PAR_CUTS)
+    .N_PAR_CUTS     (L2_PKT_N_PAR_CUTS),
+    .SIM_INIT       (L2_SIM_INIT)
   ) i_l2_pkt_mem (
     .clk_i,
     .rst_ni,

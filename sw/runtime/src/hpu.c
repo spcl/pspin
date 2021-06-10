@@ -36,9 +36,16 @@ void test()
 {
     bool completed = 0;
     spin_cmd_t cmd;
-    for (int i=0; i<10; i++) {
-        spin_rdma_put(0xdeadbeef, (void*) 0xcafebebe, 12345, &cmd);
-    }
+    //for (int i=0; i<2; i++) {
+        //spin_rdma_put(0xdeadbeef, (void*) 0xcafebebe, 12345, &cmd);
+    //}
+
+    volatile char buff[256];
+    buff[0] = 0;
+    buff[1] = 0;
+    spin_nic_dma((void *) 0x1c000000, (void *) buff, 256, &cmd);
+    spin_cmd_wait(cmd);
+    volatile char b = buff[0] + buff[1];
 }
 
 void hpu_run()

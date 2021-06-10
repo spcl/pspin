@@ -11,6 +11,7 @@
 `include "common_cells/registers.svh"
 
 module l2_mem #(
+  parameter               SIM_INIT = "skip", // "skip", "zeros", "ones", "random"
   parameter int unsigned  AXI_AW = 0,   // [bit], must be a power of 2
   parameter int unsigned  AXI_DW = 0,   // [bit], must be a power of 2
   parameter int unsigned  AXI_IW = 0,   // [bit]
@@ -157,7 +158,8 @@ module l2_mem #(
     for (genvar iRow = 0; iRow < N_SER_CUTS; iRow++) begin : gen_rows
       sram #(
         .DATA_WIDTH (CUT_DW),
-        .N_WORDS    (CUT_N_WORDS)
+        .N_WORDS    (CUT_N_WORDS),
+        .SimInit    (SIM_INIT)
       ) i_mem_cut (
         .clk_i,
         .rst_ni,

@@ -28,10 +28,10 @@
 #define SPIN_OK 0x0
 #define SPIN_FAIL 0x1
 
-#define SPIN_CMD_INTF_HDIR  0
-#define SPIN_CMD_INTF_NO    1
-#define SPIN_CMD_INTF_EDMA  2
-#define SPIN_CMD_INTF_CDMA  3
+#define SPIN_CMD_INTF_HDIR  0x00000000
+#define SPIN_CMD_INTF_NO    0x00000001
+#define SPIN_CMD_INTF_EDMA  0x00000002
+#define SPIN_CMD_INTF_CDMA  0x00004000
 
 #define GET_IP_UDP_PLD(pkt_ptr, pkt_pld_ptr, pkt_pld_len)                           \
 {                                                                                   \
@@ -89,25 +89,6 @@ typedef struct spin_rw_lock {
     volatile int32_t num_readers;
 } spin_rw_lock_t;
 
-/*
-static inline int spin_dma(void* source, void* dest, size_t size, int direction, int options, spin_dma_t* xfer)
-{
-    *xfer = spin__memcpy_nonblk(source, dest, (uint32_t)size);
-    return SPIN_OK;
-}
-
-static inline int spin_dma_wait(spin_dma_t xfer)
-{
-    spin__wait_for_tf_completion(xfer);
-    return SPIN_OK;
-}
-
-static inline int spin_dma_test(spin_dma_t xfer, uint32_t *completed)
-{
-    *completed = spin__tf_completed(xfer);
-    return SPIN_OK;
-}
-*/
 
 /** Locks **/
 
@@ -181,6 +162,25 @@ static inline int spin_cmd_test(spin_cmd_t handle, bool *completed)
     *completed = MMIO_READ(CMD_TEST) == 1;
     return SPIN_OK;
 } 
+
+static inline int spin_nic_dma(void *src, void* dst, uint32_t length, spin_cmd_t *handle)
+{
+    uint32_t cmd_info = SPIN_CMD_INTF_CDMA;
+    uint32_t res, cmd_id;
+    uint32_t base_addr = 0x1b205000;
+    asm volatile(" sw      %3, 148(%2);  \
+                   sw      x0, 152(%2);  \
+                   sw      %4, 156(%2);  \
+                   sw      x0, 160(%2);  \
+                   sw      %5, 164(%2);  \
+                   sw      %6, 144(%2);  \
+                   lw      %0, 128(%2);  \
+                   lw      %1, 132(%2);  \
+    " : "=r"(res), "=r"(cmd_id) : "r"(base_addr), "r"(src), "r"(dst), "r"(length), "r"(cmd_info));       
+    
+    *handle = cmd_id;
+    return res;
+}
 
 static inline int spin_rdma_put(uint32_t dest, void *data, uint32_t length, spin_cmd_t *handle)
 {

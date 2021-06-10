@@ -122,6 +122,7 @@ package automatic pspin_cfg_pkg;
   typedef logic [$clog2(NUM_HERS_PER_CLUSTER):0] cluster_occup_t;
   typedef logic [C_ADDR_WIDTH-1:0] pkt_ptr_t;
   typedef logic [C_ADDR_WIDTH-1:0] mem_addr_t;
+  typedef logic [64-C_ADDR_WIDTH-1:0] mem_addr_pad_t;
   typedef logic [C_SIZE_WIDTH-1:0] mem_size_t;
 
   // feedback descriptor
@@ -281,12 +282,14 @@ package automatic pspin_cfg_pkg;
       host_addr_t   host_addr;  // 64b
   } host_dma_cmd_t;
 
-  // L2 <-> L1 DMA command (193 b, padded to 76 B)
+  // L2 <-> L1 DMA command 
   typedef struct packed {
-      logic [479:0] unused;     // 480b
-      mem_size_t    length;     // 32b
-      mem_addr_t    src_addr;   // 48b
-      mem_addr_t    dst_addr;   // 48b
+      logic [447:0]  unused;     // 448b
+      mem_size_t     length;     // 32b
+      mem_addr_pad_t dst_pad;    // 16b
+      mem_addr_t     dst_addr;   // 48b
+      mem_addr_pad_t src_pad;    // 16b
+      mem_addr_t     src_addr;   // 48b
   } nic_dma_cmd_t;
 
   // PsPIN <-> Host with immediate data (586 b, padded to 76 B)

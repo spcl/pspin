@@ -65,7 +65,8 @@ module pspin_tb #();
         .TOT_NUM_CORES     (NUM_CORES),
         .NUM_CLUSTERS      (NUM_CLUSTERS),
         .N_MPQ             (NUM_MPQ),
-        .PKT_MEM_SIZE      (L2_PKT_SIZE)
+        .PKT_MEM_SIZE      (L2_PKT_SIZE),
+        .PKT_MEM_START     (L2_PKT_ADDR_START)
     ) i_packet_gen (
         .clk_i            (clk),
         .rst_ni           (rst_n),
@@ -80,6 +81,7 @@ module pspin_tb #();
     );
 
     pspin #(
+        .L2_SIM_INIT ("random"),
         .host_in_req_t (host_in_req_t),
         .host_in_resp_t (host_in_resp_t),
         .host_out_req_t (host_out_req_t),
@@ -147,13 +149,9 @@ module pspin_tb #();
         $finish(1);
     end
 
-
     initial begin
         wait (rst_n);
         $readmemh("./prog_mem_stim.slm", i_pspin.i_prog_mem.i_sram.i_tc_sram.sram);
     end
-
-
-
 
 endmodule
