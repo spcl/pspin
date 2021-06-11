@@ -5,15 +5,17 @@ SPIN_APP_NAME ?= ""
 TRACE_DIR ?= ""
 INFO_KEY ?= ""
 
-CC=${RISCV_GCC}/riscv32-unknown-elf-gcc
-OBJCOPY=${RISCV_GCC}/riscv32-unknown-elf-objcopy
-OBJDUMP=${RISCV_GCC}/riscv32-unknown-elf-objdump
+CC=${RISCV_GCC}/riscv64-unknown-elf-gcc
+OBJCOPY=${RISCV_GCC}/riscv64-unknown-elf-objcopy
+OBJDUMP=${RISCV_GCC}/riscv64-unknown-elf-objdump
 TARGET_BIN=build/$(SPIN_APP_NAME)
 
-INCLUDE_FILES=-I${PSPIN_RT}/runtime/include/
-SRC_FILES=${PSPIN_RT}/runtime/src/hpu.c ${SPIN_APP_SRCS}
-CFLAGS=-O3 -march=rv32imafd -mabi=ilp32d -mcmodel=medany -mno-fdiv -ffast-math -fno-builtin-printf -fno-common
-LDFLAGS=-nostartfiles -nostdlib -Wl,--gc-sections -T ${PSPIN_RT}/linker/link.ld
+LIBS_SRC=$(PSPIN_RT)/runtime/src/io.c 
+LIBS_INCLUDE=$(PSPIN_RT)/runtime/vendor/
+INCLUDE_FILES=-I${PSPIN_RT}/runtime/include/ -I${LIBS_INCLUDE}
+SRC_FILES=${PSPIN_RT}/runtime/src/hpu.c ${SPIN_APP_SRCS} ${LIBS_SRC}
+CFLAGS=-O3 -march=rv32imafd -mabi=ilp32d -mcmodel=medany -mno-fdiv -ffast-math -fno-builtin-printf -fno-common -ffunction-sections
+LDFLAGS=-nostartfiles -nostdlib -Wl,--gc-sections -T ${PSPIN_RT}/linker/link.ld -lm -lgcc
 
 deploy::
 	mkdir -p build/

@@ -40,6 +40,7 @@ void test()
         //spin_rdma_put(0xdeadbeef, (void*) 0xcafebebe, 12345, &cmd);
     //}
 
+    printf("hey!\n");
     volatile char buff[256];
     buff[0] = 0;
     buff[1] = 0;
