@@ -41,6 +41,7 @@ void test()
     //}
 
     printf("hey!\n");
+    asm(".word 0x0047265f");
     volatile char buff[256];
     buff[0] = 0;
     buff[1] = 0;
