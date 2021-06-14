@@ -92,17 +92,17 @@ namespace PsPIN
             uint64_t user_ptr;
         } pktentry_t;
 
-        uint32_t total_bytes_sent;
-        uint32_t total_pkts;
+        uint64_t total_bytes_sent;
+        uint64_t total_pkts;
 
         uint64_t time_last_feedback;
         uint64_t time_first_feedback;
         uint32_t total_feedbacks;
         uint32_t ni_ctrl_stalls;
 
-        uint32_t sum_pkt_latency;
-        uint32_t min_pkt_latency;
-        uint32_t max_pkt_latency;
+        uint64_t sum_pkt_latency;
+        uint64_t min_pkt_latency;
+        uint64_t max_pkt_latency;
 
         std::unordered_map<axi_addr_t, pktentry> pktmap;
 
@@ -468,9 +468,9 @@ namespace PsPIN
             {
                 assert(pktmap.find(*ni_ctrl.feedback_her_addr_i) != pktmap.end());
                 pktentry_t pktentry = pktmap[*ni_ctrl.feedback_her_addr_i];
-                uint32_t latency = sim_time() - pktentry.nic_arrival_time;
+                uint64_t latency = (uint64_t)(sim_time() - pktentry.nic_arrival_time);
 
-                SIM_PRINT("INFO FEEDBACK 0x%x %u %u\n", *ni_ctrl.feedback_her_addr_i, latency, pktentry.size);
+                SIM_PRINT("INFO FEEDBACK 0x%x %lu %u\n", *ni_ctrl.feedback_her_addr_i, latency, pktentry.size);
 
                 assert(*ni_ctrl.feedback_her_size_i == pktentry.size);
                 free_pkt_space(*ni_ctrl.feedback_her_addr_i, *ni_ctrl.feedback_her_size_i);
@@ -538,10 +538,10 @@ namespace PsPIN
             double avg_pkt_latency = ((double)sum_pkt_latency) / (1000 * total_pkts);
 
             printf("NIC inbound engine:\n");
-            printf("\tPackets: %d; Bytes: %d\n", total_pkts, total_bytes_sent);
+            printf("\tPackets: %lu; Bytes: %lu\n", total_pkts, total_bytes_sent);
             printf("\tAvg packet length: %.3lf B\n", avg_pkt_length);
             printf("\tFeedback throughput: %.3lf Gbit/s (feedback arrival time: %.3lf ns)\n", avg_feedback_throughput, avg_intra_feedback);
-            printf("\tPacket latency: avg: %.3lf ns; min: %d ns; max: %d ns\n", avg_pkt_latency, min_pkt_latency / 1000, max_pkt_latency / 1000);
+            printf("\tPacket latency: avg: %.3lf ns; min: %lu ns; max: %lu ns\n", avg_pkt_latency, min_pkt_latency / 1000, max_pkt_latency / 1000);
             printf("\tHER stalls: %d\n", ni_ctrl_stalls);
         }
     };
