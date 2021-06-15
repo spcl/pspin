@@ -6,6 +6,7 @@ SIM_LIB_SRCS=src/pspinsim.cpp
 
 CXX ?= g++
 VERILATOR_COMPILER_WORKERS ?= 8
+BENDER ?= ../../utils/bender
 
 TRACE_DEPTH?=6
 
@@ -31,7 +32,7 @@ EXE_RELEASE_FLAGS=-Iinclude/
 EXE_DEBUG_FLAGS=-Iinclude/ -DVERILATOR_HAS_TRACE
 
 SV_INC=-I../deps/axi/include/ -I../deps/common_cells/include -I../deps/cluster_interconnect/rtl/low_latency_interco/ -I../deps/riscv/include/
-SV_SRCS=$(shell cd ..; ${BENDER} script verilator -t rtl -t verilator)
+SV_SRCS=$(shell ${BENDER} script verilator -t rtl -t verilator)
 
 .PHONY: archive
 

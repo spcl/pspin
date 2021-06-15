@@ -1,0 +1,3 @@
+[submodule "hw/deps/pulp_platform_snitch_cluster"]
+	path = hw/deps/pulp_platform_snitch_cluster
+	url = https://github.com/SalvatoreDiGirolamo/snitch.git
