@@ -8,7 +8,6 @@ export PSPIN_SIM="verilator_model"
 export RISCV_GCC=
 export PSPIN_HW=
 export PSPIN_RT=
-export BENDER=
 
 #Don't change
 export TARGET_VSIM=${PSPIN_HW}/$PSPIN_SIM

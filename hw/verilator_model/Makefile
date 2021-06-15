@@ -6,6 +6,7 @@ SIM_LIB_SRCS=src/pspinsim.cpp
 
 CXX ?= g++
 VERILATOR_COMPILER_WORKERS ?= 8
+BENDER ?= ../../../utils/bender
 
 TRACE_DEPTH?=6
 
