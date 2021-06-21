@@ -31,25 +31,6 @@ typedef struct hpu_descr {
 
 volatile __attribute__ ((section(".l1_runtime"))) hpu_descr_t* volatile hpu_descr[NUM_CLUSTER_HPUS];
 
-#include "handler.h"
-void test()
-{
-    bool completed = 0;
-    spin_cmd_t cmd;
-    //for (int i=0; i<2; i++) {
-        //spin_rdma_put(0xdeadbeef, (void*) 0xcafebebe, 12345, &cmd);
-    //}
-
-    printf("hey!\n");
-    asm(".word 0x0047265f");
-    volatile char buff[256];
-    buff[0] = 0;
-    buff[1] = 0;
-    spin_nic_dma((void *) 0x1c000000, (void *) buff, 256, &cmd);
-    spin_cmd_wait(cmd);
-    volatile char b = buff[0] + buff[1];
-}
-
 void hpu_run()
 {
     handler_args_t handler_args;
@@ -65,8 +46,7 @@ void hpu_run()
         handler_fn handler_fun = (handler_fn) MMIO_READ(HWSCHED_HANDLER_FUN_ADDR); 
 
         asm volatile ("nop"); /* TELEMETRY: HANDLER:START */
-        //handler_fun(&handler_args);
-        test();
+        handler_fun(&handler_args);
         asm volatile ("nop"); /* TELEMETRY: HANDLER:END */
        
         MMIO_READ(HWSCHED_DOORBELL); 
