@@ -11,38 +11,45 @@
 import pspin_cfg_pkg::*;
 
 module mpq_engine #(
-    parameter int NUM_HER_SLOTS = 64,
-    parameter int NUM_MPQ = 8
+    parameter int unsigned NUM_HER_SLOTS = 64,
+    parameter int unsigned NUM_MPQ = 8,
+    parameter int unsigned NUM_CLUSTERS = 4,
+    /* do not override */
+    parameter int unsigned CLUSTER_ID = $clog2(NUM_CLUSTERS);
 )
 (
-    input   logic              clk_i,
-    input   logic              rst_ni,
+    input   logic                   clk_i,
+    input   logic                   rst_ni,
 
     //from pkt gen
-    output logic               her_ready_o,
-    input  logic               her_valid_i,
-    input  her_descr_t         her_i,
+    output logic                    her_ready_o,
+    input  logic                    her_valid_i,
+    input  her_descr_t              her_i,
     
     //termination signal    
-    input  logic               eos_i,
+    input  logic                    eos_i,
 
     //mpq ready signal
-    output logic [NUM_MPQ-1:0] mpq_full_o,
+    output logic [NUM_MPQ-1:0]      mpq_full_o,
 
     //from feedback engine
-    output logic               feedback_ready_o,
-    input  logic               feedback_valid_i,
-    input  feedback_descr_t    feedback_i,
+    output logic                    feedback_ready_o,
+    input  logic                    feedback_valid_i,
+    input  feedback_descr_t         feedback_i,
+
+    // clusters availability (from scheduler)
+    input  logic [NUM_CLUSTERS-1:0] cluster_avail_i,
 
     //to scheduler
-    input  logic               task_ready_i,
-    output logic               task_valid_o,
-    output handler_task_t      task_o,
+    input  logic                    task_ready_i,
+    output logic                    task_valid_o,
+    output handler_task_t           task_o,
+    output logic                    task_pinned_o,
 
     //to pktgen
-    input logic                nic_feedback_ready_i,
-    output logic               nic_feedback_valid_o,
-    output feedback_descr_t    nic_feedback_o
+    input logic                     nic_feedback_ready_i,
+    output logic                    nic_feedback_valid_o,
+    output feedback_descr_t         nic_feedback_o
 );
     typedef struct packed {
         mem_addr_t pkt_addr;
@@ -240,8 +247,11 @@ module mpq_engine #(
     assign task_valid_o = (state_q == Ready || state_q == Stalled);
 
     //this seems overworked.. 
-    assign task_o = (state_q==Ready) ? new_task : task_q;
+    assign task_o = task_d;
     assign task_d = (state_q==Ready) ? new_task : task_q;
+
+    assign task_pinned_o = task_pinned_d;
+    assign task_pinned_d = (state==Ready) ? new_task_is_pinned : task_pinned_q;
 
     assign mpq_out_state_d = (arb_ready && arb_valid) ? mpq_q[tasksent_mpq_idx].state : mpq_out_state_q;
     assign selected_mpq_d = (arb_ready && arb_valid) ? tasksent_mpq_idx : selected_mpq_q;
@@ -288,6 +298,7 @@ module mpq_engine #(
     assign new_task.handler_mem_size = mpqmeta_read_mpq.handler_mem_size;
     assign new_task.host_mem_addr    = mpqmeta_read_mpq.host_mem_addr;
     assign new_task.host_mem_size    = mpqmeta_read_mpq.host_mem_size;
+    assign new_task_is_pinned        = mpqmeta_read_mpq.pin_to_cluster;
     
     for (genvar i = 0; i< pspin_cfg_pkg::NUM_CLUSTERS; i++) begin: gen_task_scratchpad
         assign new_task.scratchpad_addr[i] = mpqmeta_read_mpq.scratchpad_addr[i];
@@ -305,50 +316,53 @@ module mpq_engine #(
     // output state, so it does not matter which output gets written. 
     mpq_fsm #(
     ) i_newher_mpq_fsm (
-        .her_new_i          (her_valid_i && her_ready_o),
-        .task_sent_i        (arb_valid && arb_ready && tasksent_mpq_idx == newher_mpq_idx),
-        .feedback_i         (feedback_valid_i && feedback_ready_o && feedback_mpq_idx == newher_mpq_idx),
+        .her_new_i           (her_valid_i && her_ready_o),
+        .task_sent_i         (arb_valid && arb_ready && tasksent_mpq_idx == newher_mpq_idx),
+        .feedback_i          (feedback_valid_i && feedback_ready_o && feedback_mpq_idx == newher_mpq_idx),
 
-        .her_new_has_hh_i   (her_i.mpq_meta.hh_addr != '0),
-        .her_new_has_th_i   (her_i.mpq_meta.th_addr != '0),
-        .her_new_is_eom_i   (her_i.eom),
+        .her_new_has_hh_i    (her_i.mpq_meta.hh_addr != '0),
+        .her_new_has_th_i    (her_i.mpq_meta.th_addr != '0),
+        .her_new_is_eom_i    (her_i.eom),
+        .her_new_is_pinned_i (her_i.mpq_meta.pin_to_cluster),
 
-        .mpq_q              (mpq_q[newher_mpq_idx]),
-        .mpq_o              (newher_mpq_fsm_s),
+        .mpq_q               (mpq_q[newher_mpq_idx]),
+        .mpq_o               (newher_mpq_fsm_s),
 
-        .update_o           (newher_mpq_fsm_update)
+        .update_o            (newher_mpq_fsm_update)
     );
 
     mpq_fsm #(
     ) i_tasksent_mpq_fsm (
-        .her_new_i          (her_valid_i && her_ready_o && newher_mpq_idx == tasksent_mpq_idx),
-        .task_sent_i        (arb_valid && arb_ready),
-        .feedback_i         (feedback_valid_i && feedback_ready_o && feedback_mpq_idx == tasksent_mpq_idx),
+        .her_new_i           (her_valid_i && her_ready_o && newher_mpq_idx == tasksent_mpq_idx),
+        .task_sent_i         (arb_valid && arb_ready),
+        .feedback_i          (feedback_valid_i && feedback_ready_o && feedback_mpq_idx == tasksent_mpq_idx),
 
-        .her_new_has_hh_i   (her_i.mpq_meta.hh_addr != '0),
-        .her_new_has_th_i   (her_i.mpq_meta.th_addr != '0),
-        .her_new_is_eom_i   (her_i.eom),
+        .her_new_has_hh_i    (her_i.mpq_meta.hh_addr != '0),
+        .her_new_has_th_i    (her_i.mpq_meta.th_addr != '0),
+        .her_new_is_eom_i    (her_i.eom),
+        .her_new_is_pinned_i (her_i.mpq_meta.pin_to_cluster),
 
-        .mpq_q              (mpq_q[tasksent_mpq_idx]),
-        .mpq_o              (tasksent_mpq_fsm_s),
+        .mpq_q               (mpq_q[tasksent_mpq_idx]),
+        .mpq_o               (tasksent_mpq_fsm_s),
 
-        .update_o           (tasksent_mpq_fsm_update)
+        .update_o            (tasksent_mpq_fsm_update)
     );
 
     mpq_fsm #(
     ) i_feedback_mpq_fsm (
-        .her_new_i          (her_valid_i && her_ready_o && newher_mpq_idx == feedback_mpq_idx),
-        .task_sent_i        (arb_valid && arb_ready && feedback_mpq_idx == tasksent_mpq_idx),
-        .feedback_i         (feedback_valid_i && feedback_ready_o),
+        .her_new_i           (her_valid_i && her_ready_o && newher_mpq_idx == feedback_mpq_idx),
+        .task_sent_i         (arb_valid && arb_ready && feedback_mpq_idx == tasksent_mpq_idx),
+        .feedback_i          (feedback_valid_i && feedback_ready_o),
 
-        .her_new_has_hh_i   (her_i.mpq_meta.hh_addr != '0),
-        .her_new_has_th_i   (her_i.mpq_meta.th_addr != '0),
-        .her_new_is_eom_i   (her_i.eom),
+        .her_new_has_hh_i    (her_i.mpq_meta.hh_addr != '0),
+        .her_new_has_th_i    (her_i.mpq_meta.th_addr != '0),
+        .her_new_is_eom_i    (her_i.eom),
+        .her_new_is_pinned_i (her_i.mpq_meta.pin_to_cluster),
 
-        .mpq_q              (mpq_q[feedback_mpq_idx]),
-        .mpq_o              (feedback_mpq_fsm_s),
+        .mpq_q               (mpq_q[feedback_mpq_idx]),
+        .mpq_o               (feedback_mpq_fsm_s),
 
-        .update_o           (feedback_mpq_fsm_update)
+        .update_o            (feedback_mpq_fsm_update)
     );
 
     always_comb begin
@@ -367,11 +381,19 @@ module mpq_engine #(
         end
     end
 
-    // Define valid/busy MPQs
-    for (genvar i=0; i<NUM_MPQ; i++) begin
-        assign mpq_valid[i] = ((mpq_q[i].state == Header) || 
-                               (mpq_q[i].state == Payload && mpq_q[i].length > 0) || 
-                               (mpq_q[i].state == Completion));
+    // Define valid MPQs
+    for (genvar i=0; i<NUM_MPQ; i++) begin : gen_mpq_validity
+        logic mpq_state_ready;
+        logic [CLUSTER_ID-1:0] mpq_cluster;
+        assign mpq_cluster = i[CLUSTER_ID-1:0];
+        assign mpq_state_ready = ((mpq_q[i].state == Header) || 
+                                  (mpq_q[i].state == Payload && mpq_q[i].length > 0) || 
+                                  (mpq_q[i].state == Completion));
+        assign mpq_valid[i] = mpq_state_ready && (~mpq_q[i].pin_to_cluster || cluster_avail_i[mpq_cluster]);
+    end
+
+    // Define busy MPQs
+    for (genvar i=0; i<NUM_MPQ; i++) begin : gen_mpq_business
         assign mpq_busy[i]  = (mpq_q[i].state != Free);
     end
 
@@ -392,6 +414,7 @@ module mpq_engine #(
             state_q <= Idle;
             mpq_out_state_q <= Free;
             task_q <= '0;
+            task_pinned_q <= 1'b0;
             new_task_triggers_feedback_q <= 1'b0;
         end else begin
             mpq_q <= mpq_d;
@@ -399,6 +422,7 @@ module mpq_engine #(
             state_q <= state_d;
             mpq_out_state_q <= mpq_out_state_d;
             task_q <= task_d;
+            task_pinned_q <= task_pinned_d;
             new_task_triggers_feedback_q <= new_task_triggers_feedback_d;
         end
     end
@@ -444,19 +468,20 @@ module mpq_fsm #(
 ) (
 
     // events
-    input logic     her_new_i,          // got a new HER
-    input logic     task_sent_i,        // got selected for sending a task
-    input logic     feedback_i,         // got a completion feedback
+    input logic     her_new_i,           // got a new HER
+    input logic     task_sent_i,         // got selected for sending a task
+    input logic     feedback_i,          // got a completion feedback
 
     //info on the new HER, if any (used only if her_new_i is asserted)
-    input  logic    her_new_has_hh_i,   // Asserted if the new HER as a header handler
-    input  logic    her_new_has_th_i,   // Asserted if the new HER as a completion handler
-    input  logic    her_new_is_eom_i,   // Asserted if the new HER is flagged as EOM
+    input  logic    her_new_has_hh_i,    // Asserted if the new HER has a header handler
+    input  logic    her_new_has_th_i,    // Asserted if the new HER has a completion handler
+    input  logic    her_new_is_eom_i,    // Asserted if the new HER is flagged as EOM
+    input  logic    her_new_is_pinned_i, // Asserted if the new HER is for a pinned MPQ
 
-    input  mpq_t    mpq_q,              // current state
-    output mpq_t    mpq_o,              // new state
+    input  mpq_t    mpq_q,               // current state
+    output mpq_t    mpq_o,               // new state
 
-    output logic    update_o            // asserted if mpq_o is valid
+    output logic    update_o             // asserted if mpq_o is valid
 );
 
     logic pushing_her, popping_her;
@@ -495,6 +520,7 @@ module mpq_fsm #(
                 if (her_new_i) begin
                     mpq_o.state = (her_new_has_hh_i) ? Header : Payload;
                     mpq_o.has_completion = her_new_has_th_i;
+                    mpq_o.pin_to_cluster = her_new_is_pinned_i;
                 end
             end
 

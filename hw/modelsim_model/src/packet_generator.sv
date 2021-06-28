@@ -191,6 +191,8 @@ module packet_generator #(
       her_descr.mpq_meta.host_mem_addr[C_HOST_ADDR_WIDTH-1:0] = 64'h0000_0000_0000_0000;
       her_descr.mpq_meta.host_mem_size[C_SIZE_WIDTH-1:0] = 32'h4000_0000;
 
+      her_descr.mpq_meta.pin_to_cluster = 1'b0;
+
       for (int i=0; i<pspin_cfg_pkg::NUM_CLUSTERS; i++) begin
         her_descr.mpq_meta.scratchpad_addr[i] = 0;
         her_descr.mpq_meta.scratchpad_size[i] = pspin_cfg_pkg::L1_SCRATCHPAD_SIZE;

@@ -27,6 +27,7 @@ module scheduler #(
     input   logic                               task_valid_i,
     output  logic                               task_ready_o,
     input   handler_task_t                      task_descr_i,
+    input   logic                               task_pinned_i,
 
     //output IF to cluster schedulers
     output logic [NUM_CLUSTERS-1:0]             cluster_task_valid_o,
@@ -38,10 +39,13 @@ module scheduler #(
     output logic [NUM_CLUSTERS-1:0]             cluster_feedback_ready_o,
     input  feedback_descr_t [NUM_CLUSTERS-1:0]  cluster_feedback_i,
 
-    //output IF to pktgen for feedbacks
+    //output IF to MPQ engine for feedbacks 
     output logic                                feedback_valid_o,
     input  logic                                feedback_ready_i,
-    output feedback_descr_t                     feedback_o 
+    output feedback_descr_t                     feedback_o,
+
+    //output IF to MPQ engine for cluster state
+    output logic [NUM_CLUSTERS-1:0]             cluster_avail_o
     
 );
 
@@ -120,14 +124,20 @@ module scheduler #(
 
     // update cluster occupation (both packets and space)
     for (genvar i=0; i<NUM_CLUSTERS; i++) begin: gen_cluster_occup
-
         always_comb begin
-            case ({cluster_task_valid_od[i] & cluster_task_ready_id[i], cluster_feedback_valid_iq[i] & cluster_feedback_ready_oq[i]})
+            logic new_task_targets_us = task_valid_i && task_ready_o && cluster_id_d == i;
+            logic got_feedback = cluster_feedback_valid_iq[i] & cluster_feedback_ready_oq[i];
+
+            case ({new_task_targets_us, got_feedback})
                 2'b10   : cluster_occup_d[i] = cluster_occup_q[i] + 1;
                 2'b01   : cluster_occup_d[i] = cluster_occup_q[i] - 1;
                 default : cluster_occup_d[i] = cluster_occup_q[i];
             endcase   
         end
+    end
+
+    for (genvar i = 0; i < NUM_CLUSTERS; i++) begin: gen_cluster_avail
+        assign cluster_avail_o[i] = cluster_occup_d[i] < MAX_OCC;
     end
 
     //home cluster is in the last clog(NUM_CLUSTERS) bits of msg_id
@@ -144,9 +154,10 @@ module scheduler #(
     //if there is not cluster avail, then we schedule to the home cluster anyway.. we don't have additional info to make a better decision.
     //Otherwise, we schedule to the home cluster if it has space (<MAX OCC) and it is ready to accept the new packets (there may be fragmentation in the cluster, 
     //there might not space even if the occupation is ok).
+    //We force the scheduling to the home cluster in case task_pinned_i is asserted. 
     assign no_cluster_avail     = (cluster_occup_q[c_occup_min] >= MAX_OCC) ? 1'b1 : 1'b0;    
     assign can_use_home_cluster = (no_cluster_avail || (cluster_occup_q[home_cluster_id] < MAX_OCC && cluster_task_ready_id[home_cluster_id]));
-    assign sel_cluster_id       = (can_use_home_cluster) ? home_cluster_id : c_occup_min;
+    assign sel_cluster_id       = (can_use_home_cluster || task_pinned_i) ? home_cluster_id : c_occup_min;
     assign cluster_id_d         = (state_q == ServePacket) ? sel_cluster_id : cluster_id_q;
 
     //task is put on all the output interfaces. Only the selected cluster ID will have
@@ -164,8 +175,6 @@ module scheduler #(
 
         case (state_q)
             ServePacket: begin
-                serving_cluster = 1'b0;
-
                 if (task_valid_i && !no_cluster_avail) begin
                     task_ready_o = 1'b1; //signal that we recvd the data
                     state_d = (cluster_task_ready_id[cluster_id_d]) ? ServePacket : WaitTransfer;
