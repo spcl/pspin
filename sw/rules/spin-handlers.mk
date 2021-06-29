@@ -14,7 +14,7 @@ LIBS_SRC=$(PSPIN_RT)/runtime/src/io.c
 LIBS_INCLUDE=$(PSPIN_RT)/runtime/vendor/
 INCLUDE_FILES=-I${PSPIN_RT}/runtime/include/ -I${LIBS_INCLUDE}
 SRC_FILES=${PSPIN_RT}/runtime/src/hpu.c ${SPIN_APP_SRCS} ${LIBS_SRC}
-CFLAGS=-O3 -fdump-rtl-mach -march=rv32imafdXpspin -mabi=ilp32d -mcmodel=medany -mno-fdiv -ffast-math -fno-builtin-printf -fno-common -ffunction-sections -flto
+CFLAGS=-O3 -march=rv32imafdXpspin -mabi=ilp32d -mcmodel=medany -mno-fdiv -ffast-math -fno-builtin-printf -fno-common -ffunction-sections -flto
 LDFLAGS=-nostartfiles -nostdlib -Wl,--gc-sections -T ${PSPIN_RT}/linker/link.ld -lm -lgcc
 
 deploy::
