@@ -137,8 +137,8 @@ module axi_dma_backend #(
     initial begin
         assert (DataWidth inside {16, 32, 64, 128, 256, 512, 1024}) 
             else $fatal(1, "16 <= DataWidth <= 1024");
-        assert (AddrWidth >= 32 & AddrWidth <=   64) 
-            else $fatal(1, " 8 <= AddrWidth <=   64");
+        assert (AddrWidth >= 32 & AddrWidth <=   128) 
+            else $fatal(1, " 8 <= AddrWidth <=   128");
     end
     `endif
     // pragma translate_on
