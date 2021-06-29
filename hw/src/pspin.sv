@@ -135,11 +135,13 @@ module pspin
   logic                                             mpqengine_scheduler_valid;
   logic                                             mpqengine_scheduler_ready;
   handler_task_t                                    mpqengine_scheduler_task;
+  logic                                             mpqengine_scheduler_task_pinned;
 
   // scheduler -> mpq_engine
   logic                                             scheduler_mpqengine_valid;
   logic                                             scheduler_mpqengine_ready;
   feedback_descr_t                                  scheduler_mpqengine_feedback;
+  logic [NUM_CLUSTERS-1:0]                          scheduler_mpqengine_cluster_avail;
 
   // scheduler -> cluster_schedulers
   logic [NUM_CLUSTERS-1:0]                          sched_loc_valid;
@@ -320,7 +322,8 @@ module pspin
   
   mpq_engine #(
     .NUM_HER_SLOTS          (NUM_MPQ_CELLS),
-    .NUM_MPQ                (NUM_MPQ) 
+    .NUM_MPQ                (NUM_MPQ),
+    .NUM_CLUSTERS           (NUM_CLUSTERS)
   ) i_mpq_engine (
     .rst_ni                 (rst_ni),
     .clk_i                  (clk_i),
@@ -341,10 +344,12 @@ module pspin
     .feedback_valid_i       (scheduler_mpqengine_valid),
     .feedback_i             (scheduler_mpqengine_feedback),
 
+    .cluster_avail_i        (scheduler_mpqengine_cluster_avail),
+
     .task_ready_i           (mpqengine_scheduler_ready),
     .task_valid_o           (mpqengine_scheduler_valid),
-    .task_o                 (mpqengine_scheduler_task)
-
+    .task_o                 (mpqengine_scheduler_task),
+    .task_pinned_o          (mpqengine_scheduler_task_pinned)
   );
 
   scheduler #(
@@ -358,11 +363,14 @@ module pspin
     .task_valid_i             (mpqengine_scheduler_valid),
     .task_ready_o             (mpqengine_scheduler_ready),
     .task_descr_i             (mpqengine_scheduler_task),
+    .task_pinned_i            (mpqengine_scheduler_task_pinned),
 
     // to MPQ engine
     .feedback_valid_o         (scheduler_mpqengine_valid),
     .feedback_ready_i         (scheduler_mpqengine_ready),
     .feedback_o               (scheduler_mpqengine_feedback),
+
+    .cluster_avail_o          (scheduler_mpqengine_cluster_avail),
 
     // to cluster_schedulers
     .cluster_task_valid_o     (sched_loc_valid),

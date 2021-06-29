@@ -160,6 +160,8 @@ package automatic pspin_cfg_pkg;
     mem_addr_t [NUM_CLUSTERS-1:0] scratchpad_addr;
     mem_size_t [NUM_CLUSTERS-1:0] scratchpad_size;
 
+    logic                         pin_to_cluster;
+
   } mpq_meta_t;
 
   // Handler execution request (HER)
@@ -244,6 +246,7 @@ package automatic pspin_cfg_pkg;
       logic [$clog2(NUM_MPQ_CELLS):0]   in_flight;
       logic                             has_completion;
       logic                             eom_seen;
+      logic                             pin_to_cluster;
   } mpq_t;
 
   //////////////

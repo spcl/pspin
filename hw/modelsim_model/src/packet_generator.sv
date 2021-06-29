@@ -176,13 +176,13 @@ module packet_generator #(
         $display("Writing %0d bytes, starting at 0x%08x.", pkt_size, write_ptr);
       end
       // send handler execution request to the scheduler
-      her_descr.mpq_meta.hh_addr[C_ADDR_WIDTH-1:0] = hh_addr;
+      her_descr.mpq_meta.hh_addr[C_ADDR_WIDTH-1:0] = 32'h1e000040; //hh_addr;
       her_descr.mpq_meta.hh_size[C_SIZE_WIDTH-1:0] = hh_size;
       
-      her_descr.mpq_meta.ph_addr[C_ADDR_WIDTH-1:0] = ph_addr;
+      her_descr.mpq_meta.ph_addr[C_ADDR_WIDTH-1:0] = 32'h1e000040; //ph_addr;
       her_descr.mpq_meta.ph_size[C_SIZE_WIDTH-1:0] = ph_size;
       
-      her_descr.mpq_meta.th_addr[C_ADDR_WIDTH-1:0] = th_addr;
+      her_descr.mpq_meta.th_addr[C_ADDR_WIDTH-1:0] = 32'h1e000040; //th_addr;
       her_descr.mpq_meta.th_size[C_SIZE_WIDTH-1:0] = th_size;
 
       her_descr.mpq_meta.handler_mem_addr[C_ADDR_WIDTH-1:0] = hmem_addr;
@@ -190,6 +190,8 @@ module packet_generator #(
       
       her_descr.mpq_meta.host_mem_addr[C_HOST_ADDR_WIDTH-1:0] = 64'h0000_0000_0000_0000;
       her_descr.mpq_meta.host_mem_size[C_SIZE_WIDTH-1:0] = 32'h4000_0000;
+
+      her_descr.mpq_meta.pin_to_cluster = 1'b1;
 
       for (int i=0; i<pspin_cfg_pkg::NUM_CLUSTERS; i++) begin
         her_descr.mpq_meta.scratchpad_addr[i] = 0;

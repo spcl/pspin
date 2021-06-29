@@ -21,7 +21,7 @@
 #endif
 
 #ifndef NUM_INT_OP
-#define NUM_INT_OP 0
+#define NUM_INT_OP 512
 #endif
 
 volatile __attribute__((section(".l2_handler_data"))) uint8_t handler_mem[] = {0xde, 0xad, 0xbe, 0xef};
