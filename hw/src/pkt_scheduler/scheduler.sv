@@ -125,10 +125,8 @@ module scheduler #(
     // update cluster occupation (both packets and space)
     for (genvar i=0; i<NUM_CLUSTERS; i++) begin: gen_cluster_occup
         always_comb begin
-            logic new_task_targets_us = task_valid_i && task_ready_o && cluster_id_d == i;
-            logic got_feedback = cluster_feedback_valid_iq[i] & cluster_feedback_ready_oq[i];
-
-            case ({new_task_targets_us, got_feedback})
+            //that's ugly.. not sure how temp var would synthetize though :(
+            case ({task_valid_i && task_ready_o && cluster_id_d == i, cluster_feedback_valid_iq[i] & cluster_feedback_ready_oq[i]})
                 2'b10   : cluster_occup_d[i] = cluster_occup_q[i] + 1;
                 2'b01   : cluster_occup_d[i] = cluster_occup_q[i] - 1;
                 default : cluster_occup_d[i] = cluster_occup_q[i];

@@ -15,7 +15,7 @@ module mpq_engine #(
     parameter int unsigned NUM_MPQ = 8,
     parameter int unsigned NUM_CLUSTERS = 4,
     /* do not override */
-    parameter int unsigned CLUSTER_ID = $clog2(NUM_CLUSTERS);
+    parameter int unsigned CLUSTER_ID = $clog2(NUM_CLUSTERS)
 )
 (
     input   logic                   clk_i,
@@ -41,6 +41,9 @@ module mpq_engine #(
     input  logic [NUM_CLUSTERS-1:0] cluster_avail_i,
 
     //to scheduler
+    /* WARNING: this unit can deassert task_valid_o at any point, violating the FIFO protocol. 
+       It does not livelock because the scheduler will raise task_ready_i as it sees 
+       task_valid_o && it is ready to receive. */
     input  logic                    task_ready_i,
     output logic                    task_valid_o,
     output handler_task_t           task_o,
@@ -57,8 +60,7 @@ module mpq_engine #(
     } mpq_pkt_t;
 
     localparam int unsigned MPQ_META_LEN   = $bits(mpq_meta_t);
-    localparam int unsigned MPQ_META_LEN_B = MPQ_META_LEN/8;
-
+    localparam int unsigned MPQ_META_LEN_B = (MPQ_META_LEN + 8 - 1)/8;
     // MPQ engine state. This is mainly to handle the case in which
     // task_ready_i is not asserted and enable pipelining between
     // reading from MPQ meta memory and defining output task
@@ -133,6 +135,10 @@ module mpq_engine #(
     // ready/valid for arbiter 
     logic arb_ready, arb_valid;
 
+    // asserted if the task being sent out cannot be spilled on multiple clusters
+    logic task_pinned_d, task_pinned_q;
+    logic new_task_is_pinned;
+
     assign mpq_full_o = fifo_full;
 
     // define the MPQ indices for the different events
@@ -196,7 +202,7 @@ module mpq_engine #(
         .DataWidth  (0),
         .ExtPrio    (0),
         .AxiVldRdy  (1),
-        .LockIn     (1)
+        .LockIn     (0)
     ) i_mpq_rr_arb (
         .clk_i      (clk_i),
         .rst_ni     (rst_ni),
@@ -251,7 +257,7 @@ module mpq_engine #(
     assign task_d = (state_q==Ready) ? new_task : task_q;
 
     assign task_pinned_o = task_pinned_d;
-    assign task_pinned_d = (state==Ready) ? new_task_is_pinned : task_pinned_q;
+    assign task_pinned_d = (state_q==Ready) ? new_task_is_pinned : task_pinned_q;
 
     assign mpq_out_state_d = (arb_ready && arb_valid) ? mpq_q[tasksent_mpq_idx].state : mpq_out_state_q;
     assign selected_mpq_d = (arb_ready && arb_valid) ? tasksent_mpq_idx : selected_mpq_q;
