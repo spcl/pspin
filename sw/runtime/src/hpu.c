@@ -72,51 +72,50 @@ void hpu_entry()
         void *handler_mem;
         init_handlers(&hh, &ph, &th, &handler_mem);
     }
-/*
-    clear_csr(PULP_CSR_MSTATUS, MSTATUS_USER);
-    write_csr(PULP_CSR_MEPC, hpu_run);
+
+    clear_csr(CSR_MSTATUS, MSTATUS_USER);
+    write_csr(CSR_MEPC, hpu_run);
 
     write_csr(PULP_CSR_MTVEC, mtvec);
 
     //we save these now because can't access them in user mode
     write_register(x10, cluster_id);
     write_register(x11, core_id);
-
+   
     //save the original sp in the HPU descr
     read_register(x2, hpu_descr[core_id]);
 
     //trap to user mode
     asm volatile("mret");   
-*/
-    //we save these now because can't access them in user mode
-    write_register(x10, cluster_id);
-    write_register(x11, core_id);
-
-    hpu_run();
+    
+    //hpu_run();
 }
-/*
+
 void int0_handler()
 {
     uint32_t mcause;
-    read_csr(PULP_CSR_MCAUSE, mcause);
+    uint32_t hart_id = snitch_hartid();
+    uint32_t core_id = hart_id & 0x0000FFFF;
+
+    read_csr(CSR_MCAUSE, mcause);
 
     MMIO_WRITE(HWSCHED_ERROR, mcause);
     MMIO_READ(HWSCHED_DOORBELL);
 
     //restore the stack pointer
-    write_register(x2, hpu_descr[rt_core_id()]);
+    write_register(x2, hpu_descr[core_id]);
 
     //we want to resume the runtime and get ready
     //for the next handler
-    clear_csr(PULP_CSR_MSTATUS, MSTATUS_USER);
-    write_csr(PULP_CSR_MEPC, hpu_run);
+    clear_csr(CSR_MSTATUS, MSTATUS_USER);
+    write_csr(CSR_MEPC, hpu_run);
 
     //trap to user mode
     asm volatile("mret");
 }
-*/
+
 void __attribute__ ((aligned (256))) mtvec()
 {
     // ecall 
-    //asm volatile("jalr x0, %0, 0" : : "r"(int0_handler));
+    asm volatile("jalr x0, %0, 0" : : "r"(int0_handler));
 }

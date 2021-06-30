@@ -49,5 +49,10 @@
 #define CMD_WORD5   0x1B2050A8
 #define CMD_WORD6   0x1B2050AC
 
+#define CSR_MSTATUS 0x300
+#define CSR_MTVEC   0x305
+#define CSR_MEPC    0x341
+#define CSR_MCAUSE  0x342
+
 #define MMIO_READ(X) (*((uint32_t volatile*) (X)))
 #define MMIO_WRITE(X, V) (*((uint32_t volatile*) (X)) = V)
