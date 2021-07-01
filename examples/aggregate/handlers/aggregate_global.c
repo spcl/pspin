@@ -62,7 +62,8 @@ __handler__ void aggregate_global_th(handler_args_t *args)
     uint64_t host_address = task->host_mem_high;
     host_address = (host_address << 32) | (task->host_mem_low);
 
-    spin_host_write(host_address, (uint64_t) result, false);
+    spin_cmd_t cmd;
+    spin_host_write(host_address, (uint64_t) result, &cmd);
 }
 
 void init_handlers(handler_fn * hh, handler_fn *ph, handler_fn *th, void **handler_mem_ptr)

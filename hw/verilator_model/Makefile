@@ -20,6 +20,7 @@ VLT_FLAGS    += -Wno-UNSIGNED
 VLT_FLAGS    += -Wno-UNOPTFLAT
 VLT_FLAGS    += -Wno-NOLATCH
 VLT_FLAGS    += -Wno-fatal
+VLT_FLAGS    += --prof-cfuncs
 
 VFLAGS_RELEASE=--Mdir obj_dir_release --sv $(VLT_FLAGS) -j $(VERILATOR_COMPILER_WORKERS) +systemverilogext+sv -Wno-lint -CFLAGS "-fPIC"
 VFLAGS_DEBUG=--Mdir obj_dir_debug --sv --assert --trace --trace-structs --trace-depth $(TRACE_DEPTH) -CFLAGS "-DVERILATOR_HAS_TRACE -fPIC" $(VLT_FLAGS) -j $(VERILATOR_COMPILER_WORKERS) +systemverilogext+sv -Wno-lint
