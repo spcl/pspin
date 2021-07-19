@@ -10,7 +10,7 @@
 
 `include "axi/typedef.svh"
 
-module cluster_noc #(
+module cluster_demux #(
   parameter int unsigned NumClusters = 0,
   parameter int unsigned AddrWidth = 0,
   parameter int unsigned DataWidth = 0,

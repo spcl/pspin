@@ -80,6 +80,10 @@ module pspin
   snitch_cluster_cfg_pkg::narrow_in_req_t     [NUM_CLUSTERS-1:0]  cl_narrow_in_req;
   snitch_cluster_cfg_pkg::narrow_in_resp_t    [NUM_CLUSTERS-1:0]  cl_narrow_in_resp;
 
+  // Service channels (PTW, icache)
+  snitch_cluster_cfg_pkg::service_out_req_t    [NUM_CLUSTERS-1:0]  cl_service_out_req;
+  snitch_cluster_cfg_pkg::service_out_resp_t   [NUM_CLUSTERS-1:0]  cl_service_out_resp;
+
   // Wide channels (DMA)
   snitch_cluster_cfg_pkg::wide_out_req_t      [NUM_CLUSTERS-1:0]  cl_wide_out_req;
   snitch_cluster_cfg_pkg::wide_out_resp_t     [NUM_CLUSTERS-1:0]  cl_wide_out_resp;
@@ -96,6 +100,9 @@ module pspin
   
   soc_narrow_req_t  pe_l2i_req;
   soc_narrow_resp_t pe_l2i_resp;
+
+  soc_narrow_req_t  ptw_req;
+  soc_narrow_resp_t ptw_resp;
 
   AXI_BUS #(
     .AXI_ADDR_WIDTH (AXI_SOC_AW),
@@ -190,7 +197,7 @@ module pspin
   host_wide_req_t                                   host_mst_soc_dma_req, host_mst_hdir_req;
   host_wide_resp_t                                  host_mst_soc_dma_resp, host_mst_hdir_resp;
 
-  // NHI -> CLUSTERS (to cluster_noc for demultiplixeing)
+  // NHI -> CLUSTERS (to cluster_demux for demultiplixeing)
   soc_wide_req_t                                    nhi_req;
   soc_wide_resp_t                                   nhi_resp;
 
@@ -503,6 +510,7 @@ module pspin
     snitch_cluster #(
       .PhysicalAddrWidth (snitch_cluster_cfg_pkg::PhysicalAddrWidth),
       .NarrowDataWidth (snitch_cluster_cfg_pkg::NarrowDataWidth),
+      .ServiceDataWidth (snitch_cluster_cfg_pkg::ServiceDataWidth),
       .WideDataWidth (snitch_cluster_cfg_pkg::WideDataWidth),
       .NarrowIdWidthIn (snitch_cluster_cfg_pkg::NarrowIdWidthIn),
       .WideIdWidthIn (snitch_cluster_cfg_pkg::WideIdWidthIn),
@@ -516,6 +524,8 @@ module pspin
       .wide_out_resp_t (snitch_cluster_cfg_pkg::wide_out_resp_t),
       .wide_in_req_t (snitch_cluster_cfg_pkg::wide_in_req_t),
       .wide_in_resp_t (snitch_cluster_cfg_pkg::wide_in_resp_t),
+      .service_out_req_t (snitch_cluster_cfg_pkg::service_out_req_t),
+      .service_out_resp_t (snitch_cluster_cfg_pkg::service_out_resp_t),
       .NrHives (snitch_cluster_cfg_pkg::NrHives),
       .NrCores (snitch_cluster_cfg_pkg::NrCores),
       .TCDMDepth (snitch_cluster_cfg_pkg::TCDMDepth),
@@ -590,6 +600,8 @@ module pspin
       .narrow_in_resp_o       ( cl_narrow_in_resp[i]      ),
       .narrow_out_req_o       ( cl_narrow_out_req[i]      ),
       .narrow_out_resp_i      ( cl_narrow_out_resp[i]     ),
+      .service_out_req_o      ( cl_service_out_req[i]     ),
+      .service_out_resp_i     ( cl_service_out_resp[i]    ),
       .wide_out_req_o         ( cl_wide_out_req[i]        ),
       .wide_out_resp_i        ( cl_wide_out_resp[i]       ),
       .wide_in_req_i          ( cl_wide_in_req[i]         ),
@@ -635,46 +647,70 @@ module pspin
   );
 
   // Narrow accesses from HPUs to other clusters and L2
-  pe_noc #(
+  pe_xbar #(
     .NumClusters          (NUM_CLUSTERS),
     .AddrWidth            (AXI_SOC_AW),
     .ClDataWidth          (AXI_NARROW_DW),
     .ClOupIdWidth         (snitch_cluster_cfg_pkg::NarrowIdWidthOut),
     .ClInpIdWidth         (snitch_cluster_cfg_pkg::NarrowIdWidthIn),
     .L2DataDataWidth      (AXI_WIDE_DW),
-    .L2ProgDataWidth      (AXI_NARROW_DW),
     .L2DataIdWidth        (AXI_IW),
-    .L2ProgIdWidth        (AXI_IW),
     .UserWidth            (AXI_UW),
     .cl_oup_req_t         (snitch_cluster_cfg_pkg::narrow_out_req_t),
     .cl_oup_resp_t        (snitch_cluster_cfg_pkg::narrow_out_resp_t),
     .cl_inp_req_t         (snitch_cluster_cfg_pkg::narrow_in_req_t),
     .cl_inp_resp_t        (snitch_cluster_cfg_pkg::narrow_in_resp_t),
     .l2d_req_t            (soc_wide_req_t), 
-    .l2d_resp_t           (soc_wide_resp_t),
-    .l2i_req_t            (soc_narrow_req_t),
-    .l2i_resp_t           (soc_narrow_resp_t)
-  ) i_pe_noc (
+    .l2d_resp_t           (soc_wide_resp_t)
+  ) i_pe_xbar (
     .clk_i                ( clk_i                              ),
     .rst_ni               ( rst_ni                             ),
     .cl_start_addr_i      ( cl_start_addr                      ),
     .cl_end_addr_i        ( cl_end_addr                        ),
     .l2d_start_addr_i     ( L2D_MIN_ADDR[AXI_SOC_AW-1:0]       ),
     .l2d_end_addr_i       ( L2D_MAX_ADDR[AXI_SOC_AW-1:0]       ),
-    .l2i_start_addr_i     ( L2_PROG_ADDR_START[AXI_SOC_AW-1:0] ),
-    .l2i_end_addr_i       ( L2_PROG_ADDR_END[AXI_SOC_AW-1:0]   ),
     .from_cl_req_i        ( cl_narrow_out_req                  ),
     .from_cl_resp_o       ( cl_narrow_out_resp                 ),
     .to_cl_req_o          ( cl_narrow_in_req                   ),
     .to_cl_resp_i         ( cl_narrow_in_resp                  ),
     .l2d_req_o            ( pe_l2d_req                         ),
-    .l2d_resp_i           ( pe_l2d_resp                        ),
-    .l2i_req_o            ( pe_l2i_req                         ),
-    .l2i_resp_i           ( pe_l2i_resp                        )
+    .l2d_resp_i           ( pe_l2d_resp                        )
+  );
+
+  // Narrow accesses from HPUs to L2 data (PTW) and prog mem
+  service_xbar #(
+    .NumClusters          (NUM_CLUSTERS),
+    .AddrWidth            (AXI_SOC_AW),
+    .ServiceDataWidth     (AXI_SERVICE_DW),
+    .ServiceIDWidth       (snitch_cluster_cfg_pkg::ServiceIdWidthOut),
+    .L2DataDataWidth      (AXI_WIDE_DW),
+    .L2ProgDataWidth      (AXI_NARROW_DW),
+    .L2DataIdWidth        (AXI_IW),
+    .L2ProgIdWidth        (AXI_IW),
+    .UserWidth            (AXI_UW),
+    .service_req_t        (snitch_cluster_cfg_pkg::service_out_req_t),
+    .service_rsp_t        (snitch_cluster_cfg_pkg::service_out_resp_t),
+    .icache_req_t         (soc_narrow_req_t),
+    .icache_rsp_t         (soc_narrow_resp_t),
+    .ptw_req_t            (soc_wide_req_t), 
+    .ptw_rsp_t            (soc_wide_resp_t)
+  ) i_service_xbar (
+    .clk_i                ( clk_i                              ),
+    .rst_ni               ( rst_ni                             ),
+    .l2d_start_addr_i     ( L2D_MIN_ADDR[AXI_SOC_AW-1:0]       ),
+    .l2d_end_addr_i       ( L2D_MAX_ADDR[AXI_SOC_AW-1:0]       ),
+    .l2i_start_addr_i     ( L2_PROG_ADDR_START[AXI_SOC_AW-1:0] ),
+    .l2i_end_addr_i       ( L2_PROG_ADDR_END[AXI_SOC_AW-1:0]   ),
+    .service_req_i        ( cl_service_out_req                 ),
+    .service_rsp_o        ( cl_service_out_rsp                 ),
+    .icache_req_o         ( pe_l2i_req                         ),
+    .icache_rsp_i         ( pe_l2i_resp                        ),
+    .ptw_req_o            ( ptw_req                            ),
+    .ptw_rsp_i            ( ptw_resp                           )
   );
 
   // Wide accesses from cluster-local DMA engines to L2
-  dma_noc #(
+  dma_mux #(
     .NumClusters          (NUM_CLUSTERS),
     .AddrWidth            (AXI_SOC_AW),
     .DataWidth            (AXI_WIDE_DW),
@@ -685,7 +721,7 @@ module pspin
     .dma_resp_t           (snitch_cluster_cfg_pkg::wide_out_resp_t),
     .l2_req_t             (soc_wide_req_t),
     .l2_resp_t            (soc_wide_resp_t)
-  ) i_dma_noc (
+  ) i_dma_mux (
     .clk_i                ( clk_i                        ),
     .rst_ni               ( rst_ni                       ),
     .l2_start_addr_i      ( L2D_MIN_ADDR[AXI_SOC_AW-1:0] ),
@@ -697,7 +733,7 @@ module pspin
   );
   
   // Wide accesses from NHI slave ports to clusters
-  cluster_noc #(
+  cluster_demux #(
     .NumClusters  (NUM_CLUSTERS),
     .AddrWidth    (AXI_SOC_AW),
     .DataWidth    (AXI_WIDE_DW),
@@ -708,7 +744,7 @@ module pspin
     .nhi_resp_t   (soc_wide_resp_t),
     .cl_req_t     (snitch_cluster_cfg_pkg::wide_in_req_t),
     .cl_resp_t    (snitch_cluster_cfg_pkg::wide_in_resp_t)
-  ) i_cluster_noc (
+  ) i_cluster_demux (
     .clk_i                ( clk_i             ),
     .rst_ni               ( rst_ni            ),
     .cl_start_addr_i      ( cl_start_addr     ),
@@ -767,18 +803,20 @@ module pspin
   ) i_l2_xbar (
     .clk_i,
     .rst_ni,
-    .l2_hnd_start_addr_i  (L2_HND_ADDR_START[AXI_SOC_AW-1:0] ),
-    .l2_hnd_end_addr_i    (L2_HND_ADDR_END[AXI_SOC_AW-1:0]   ),
-    .l2_pkt_start_addr_i  (L2_PKT_ADDR_START[AXI_SOC_AW-1:0] ),
-    .l2_pkt_end_addr_i    (L2_PKT_ADDR_END[AXI_SOC_AW-1:0]   ),
-    .pe_req_i             (pe_l2d_req                        ),
-    .pe_resp_o            (pe_l2d_resp                       ),
-    .dma_req_i            (dma_l2_req                        ),
-    .dma_resp_o           (dma_l2_resp                       ),
-    .l2_hnd_req_o         (l2_hnd_req_a                      ),
-    .l2_hnd_resp_i        (l2_hnd_resp_a                     ),
-    .l2_pkt_req_o         (l2_pkt_req_a                      ),
-    .l2_pkt_resp_i        (l2_pkt_resp_a                     )
+    .l2_hnd_start_addr_i  ( L2_HND_ADDR_START[AXI_SOC_AW-1:0] ),
+    .l2_hnd_end_addr_i    ( L2_HND_ADDR_END[AXI_SOC_AW-1:0]   ),
+    .l2_pkt_start_addr_i  ( L2_PKT_ADDR_START[AXI_SOC_AW-1:0] ),
+    .l2_pkt_end_addr_i    ( L2_PKT_ADDR_END[AXI_SOC_AW-1:0]   ),
+    .pe_req_i             ( pe_l2d_req                        ),
+    .pe_resp_o            ( pe_l2d_resp                       ),
+    .ptw_req_i            ( ptw_req                           ),
+    .ptw_resp_o           ( ptw_resp                          ),
+    .dma_req_i            ( dma_l2_req                        ),
+    .dma_resp_o           ( dma_l2_resp                       ),
+    .l2_hnd_req_o         ( l2_hnd_req_a                      ),
+    .l2_hnd_resp_i        ( l2_hnd_resp_a                     ),
+    .l2_pkt_req_o         ( l2_pkt_req_a                      ),
+    .l2_pkt_resp_i        ( l2_pkt_resp_a                     )
   );
 
   

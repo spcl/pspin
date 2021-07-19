@@ -30,6 +30,8 @@ module l2_xbar #(
 
   input  req_t  pe_req_i,
   output resp_t pe_resp_o,
+  input  req_t  ptw_req_i,
+  output resp_t ptw_resp_o,
   input  req_t  dma_req_i,
   output resp_t dma_resp_o,
 
@@ -224,7 +226,7 @@ module l2_xbar #(
 
 
   // Types of master ports of multiplexers.
-  parameter int unsigned HndNumSlvPorts = 2;
+  parameter int unsigned HndNumSlvPorts = 3;
   parameter int unsigned PktNumSlvPorts = 2;
   parameter int unsigned HndMuxIdWidth = IdWidth + cf_math_pkg::idx_width(HndNumSlvPorts);
   parameter int unsigned PktMuxIdWidth = IdWidth + cf_math_pkg::idx_width(PktNumSlvPorts);
@@ -277,8 +279,8 @@ module l2_xbar #(
     .clk_i,
     .rst_ni,
     .test_i       (1'b0),
-    .slv_reqs_i   ({dma_hnd_req,  pe_hnd_req}),
-    .slv_resps_o  ({dma_hnd_resp, pe_hnd_resp}),
+    .slv_reqs_i   ({dma_hnd_req,  pe_hnd_req, ptw_req_i}),
+    .slv_resps_o  ({dma_hnd_resp, pe_hnd_resp, ptw_resp_o}),
     .mst_req_o    (hnd_mux_req),
     .mst_resp_i   (hnd_mux_resp)
   );

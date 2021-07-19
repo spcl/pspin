@@ -11,7 +11,7 @@
 `include "axi/typedef.svh"
 
 /// On-chip network interconnecting the DMA engines of all clusters to the L2.
-module dma_noc #(
+module dma_mux #(
   parameter int unsigned NumClusters = 0,
   parameter int unsigned AddrWidth = 0,
   parameter int unsigned DataWidth = 0,

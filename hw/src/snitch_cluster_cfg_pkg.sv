@@ -9,10 +9,14 @@ package snitch_cluster_cfg_pkg;
   localparam int unsigned AddrWidth = pspin_cfg_pkg::AXI_SOC_AW;
   localparam int unsigned NarrowDataWidth = pspin_cfg_pkg::AXI_NARROW_DW;
   localparam int unsigned WideDataWidth = pspin_cfg_pkg::AXI_WIDE_DW;
+  localparam int unsigned ServiceDataWidth = pspin_cfg_pkg::AXI_SERVICE_DW;
 
   localparam int unsigned NarrowIdWidthIn = pspin_cfg_pkg::AXI_IW;
-  localparam int unsigned NrMasters = 3 + NrHives;
+  localparam int unsigned NrMasters = 2;
   localparam int unsigned NarrowIdWidthOut = $clog2(NrMasters) + NarrowIdWidthIn;
+
+  localparam int unsigned NrServiceMasters = 1 + NrHives;
+  localparam int unsigned ServiceIdWidthOut = $clog2(NrServiceMasters);
 
   localparam int unsigned NrDmaMasters = 2; // ??
   localparam int unsigned WideIdWidthIn = 6; // ?
@@ -70,22 +74,25 @@ package snitch_cluster_cfg_pkg;
   localparam int unsigned RegisterSequencer = 0;
   localparam int unsigned IsoCrossing = 0;
 
-  typedef logic [AddrWidth-1:0]         addr_t;
-  typedef logic [NarrowDataWidth-1:0]   data_t;
-  typedef logic [NarrowDataWidth/8-1:0] strb_t;
-  typedef logic [WideDataWidth-1:0]     data_dma_t;
-  typedef logic [WideDataWidth/8-1:0]   strb_dma_t;
-  typedef logic [NarrowIdWidthIn-1:0]   narrow_in_id_t;
-  typedef logic [NarrowIdWidthOut-1:0]  narrow_out_id_t;
-  typedef logic [WideIdWidthIn-1:0]     wide_in_id_t;
-  typedef logic [WideIdWidthOut-1:0]    wide_out_id_t;
-  typedef logic [UserWidth-1:0]         user_t;
+  typedef logic [AddrWidth-1:0]          addr_t;
+  typedef logic [NarrowDataWidth-1:0]    data_t;
+  typedef logic [NarrowDataWidth/8-1:0]  strb_t;
+  typedef logic [WideDataWidth-1:0]      data_dma_t;
+  typedef logic [WideDataWidth/8-1:0]    strb_dma_t;
+  typedef logic [ServiceDataWidth-1:0]   data_service_t;
+  typedef logic [ServiceDataWidth/8-1:0] strb_service_t;
+  typedef logic [NarrowIdWidthIn-1:0]    narrow_in_id_t;
+  typedef logic [NarrowIdWidthOut-1:0]   narrow_out_id_t;
+  typedef logic [WideIdWidthIn-1:0]      wide_in_id_t;
+  typedef logic [WideIdWidthOut-1:0]     wide_out_id_t;
+  typedef logic [ServiceIdWidthOut-1:0]  service_out_id_t;
+  typedef logic [UserWidth-1:0]          user_t;
 
   `AXI_TYPEDEF_ALL(narrow_in, addr_t, narrow_in_id_t, data_t, strb_t, user_t)
   `AXI_TYPEDEF_ALL(narrow_out, addr_t, narrow_out_id_t, data_t, strb_t, user_t)
   `AXI_TYPEDEF_ALL(wide_in, addr_t, wide_in_id_t, data_dma_t, strb_dma_t, user_t)
   `AXI_TYPEDEF_ALL(wide_out, addr_t, wide_out_id_t, data_dma_t, strb_dma_t, user_t)
-  
+  `AXI_TYPEDEF_ALL(service_out, addr_t, service_out_id_t, data_service_t, strb_service_t, user_t) 
   
   localparam snitch_pma_pkg::snitch_pma_t SnitchPMACfg = '{
       NrCachedRegionRules: 1,

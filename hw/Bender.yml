@@ -28,12 +28,13 @@ sources:
  - src/hpu_driver/task_frontend.sv
  - src/hpu_driver/cmd_frontend.sv
 # Level 2:
- - src/interconnects/cluster_noc.sv
- - src/interconnects/dma_noc.sv
+ - src/interconnects/cluster_demux.sv
+ - src/interconnects/dma_mux.sv
  - src/interconnects/host_mst_mux.sv
  - src/interconnects/l2_xbar.sv
  - src/interconnects/nhi_xbar.sv
- - src/interconnects/pe_noc.sv
+ - src/interconnects/pe_xbar.sv
+ - src/interconnects/service_xbar.sv
  - src/memories/l2_mem.sv
  - src/memories/prog_mem.sv
  - src/pkt_scheduler/cluster_scheduler.sv
