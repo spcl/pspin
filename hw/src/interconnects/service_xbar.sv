@@ -186,7 +186,7 @@ module service_xbar #(
         .slv_req_i  (cl_l2d_req),
         .slv_resp_o (cl_l2d_resp),
         .mst_req_o  (ptw_req_o),
-        .mst_resp_i (ptw_rsp_o)
+        .mst_resp_i (ptw_rsp_i)
     );
 
     // ID width converter towards L2 prog.
@@ -243,7 +243,7 @@ module service_xbar #(
         .slv_req_i  (cl_l2i_req),
         .slv_resp_o (cl_l2i_resp),
         .mst_req_o  (icache_req_o),
-        .mst_resp_i (icache_rsp_o)
+        .mst_resp_i (icache_rsp_i)
     );
 
 endmodule

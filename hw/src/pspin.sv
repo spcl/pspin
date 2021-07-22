@@ -101,8 +101,8 @@ module pspin
   soc_narrow_req_t  pe_l2i_req;
   soc_narrow_resp_t pe_l2i_resp;
 
-  soc_narrow_req_t  ptw_req;
-  soc_narrow_resp_t ptw_resp;
+  soc_wide_req_t  ptw_req;
+  soc_wide_resp_t ptw_resp;
 
   AXI_BUS #(
     .AXI_ADDR_WIDTH (AXI_SOC_AW),
@@ -702,7 +702,7 @@ module pspin
     .l2i_start_addr_i     ( L2_PROG_ADDR_START[AXI_SOC_AW-1:0] ),
     .l2i_end_addr_i       ( L2_PROG_ADDR_END[AXI_SOC_AW-1:0]   ),
     .service_req_i        ( cl_service_out_req                 ),
-    .service_rsp_o        ( cl_service_out_rsp                 ),
+    .service_rsp_o        ( cl_service_out_resp                ),
     .icache_req_o         ( pe_l2i_req                         ),
     .icache_rsp_i         ( pe_l2i_resp                        ),
     .ptw_req_o            ( ptw_req                            ),

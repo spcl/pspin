@@ -20,8 +20,8 @@ package automatic pspin_cfg_pkg;
   localparam int unsigned       AXI_SOC_AW                  = 48;   // [bit]
   localparam int unsigned       AXI_HOST_AW                 = 64;   // [bit]
   localparam int unsigned       AXI_WIDE_DW                 = 512;  // [bit], must be a power of 2
-  localparam int unsigned       AXI_NARROW_DW               = 32;   // [bit], must be a power of 2
-  localparam int unsigned       AXI_SERVICE_DW              = 128;  // [bit], must be a power of 2
+  localparam int unsigned       AXI_NARROW_DW               = 64;   // [bit], must be a power of 2
+  localparam int unsigned       AXI_SERVICE_DW              = 64;   // [bit], must be a power of 2
   localparam int unsigned       AXI_IW                      = 6;    // [bit]
   localparam int unsigned       AXI_UW                      = 4;    // [bit]
 

@@ -15,8 +15,9 @@ package snitch_cluster_cfg_pkg;
   localparam int unsigned NrMasters = 2;
   localparam int unsigned NarrowIdWidthOut = $clog2(NrMasters) + NarrowIdWidthIn;
 
-  localparam int unsigned NrServiceMasters = 1 + NrHives;
-  localparam int unsigned ServiceIdWidthOut = $clog2(NrServiceMasters);
+  localparam int unsigned ServiceIdWidthIn  = 1;
+  localparam int unsigned NrServiceMasters  = 1 + NrHives;
+  localparam int unsigned ServiceIdWidthOut = ServiceIdWidthIn + $clog2(NrServiceMasters);
 
   localparam int unsigned NrDmaMasters = 2; // ??
   localparam int unsigned WideIdWidthIn = 6; // ?
@@ -39,7 +40,11 @@ package snitch_cluster_cfg_pkg;
 
   localparam int unsigned RVE     = 8'b00000000;
   localparam int unsigned RVF     = 8'b11111111;
-  localparam int unsigned RVD     = 8'b11111111;
+
+  // SALVO: we disable it for now. We need 64 narrow data path to enable them (from the LSU inside the FPU). 
+  // This would imply having 64 bit memory banks, which could increase bank conflicts. If needed, we can add 
+  // a DW converter on the path and keep 32 bit banks
+  localparam int unsigned RVD     = 8'b00000000;
   localparam int unsigned XF16    = 8'b00000000;
   localparam int unsigned XF16ALT = 8'b00000000;
   localparam int unsigned XF8     = 8'b00000000;
