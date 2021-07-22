@@ -44,7 +44,7 @@ package snitch_cluster_cfg_pkg;
   // SALVO: we disable it for now. We need 64 narrow data path to enable them (from the LSU inside the FPU). 
   // This would imply having 64 bit memory banks, which could increase bank conflicts. If needed, we can add 
   // a DW converter on the path and keep 32 bit banks
-  localparam int unsigned RVD     = 8'b00000000;
+  localparam int unsigned RVD     = 8'b11111111;
   localparam int unsigned XF16    = 8'b00000000;
   localparam int unsigned XF16ALT = 8'b00000000;
   localparam int unsigned XF8     = 8'b00000000;
@@ -68,10 +68,10 @@ package snitch_cluster_cfg_pkg;
   localparam int unsigned Hive [NrCores] = '{0, 0, 0, 0, 0, 0, 0, 0};
 
   localparam int unsigned Radix = 2;
-  localparam int unsigned RegisterOffloadReq = 1;
-  localparam int unsigned RegisterOffloadRsp = 1;
-  localparam int unsigned RegisterCoreReq = 1;
-  localparam int unsigned RegisterCoreRsp = 1;
+  localparam int unsigned RegisterOffloadReq = 0;
+  localparam int unsigned RegisterOffloadRsp = 0;
+  localparam int unsigned RegisterCoreReq = 0;
+  localparam int unsigned RegisterCoreRsp = 0;
   localparam int unsigned RegisterTCDMCuts = 0;
   localparam int unsigned RegisterExtWide = 0;
   localparam int unsigned RegisterExtNarrow = 0;
