@@ -229,15 +229,15 @@ static inline int spin_host_dma(uint64_t host_addr, uint32_t nic_addr, uint8_t d
 {
     uint32_t host_address_high = (uint32_t) (host_addr >> 32);
     uint32_t host_address_low = (uint32_t) host_addr;
-    uint32_t cmd_info = 0;
+    uint32_t cmd_info = SPIN_CMD_INTF_EDMA;
     uint32_t res, cmd_id;
     uint32_t base_addr = 0x1b205000;
     asm volatile(" sw      %3, 148(%2);  \
-                   sw      %4, 144(%2);  \
-                   sw      %5, 152(%2);  \
-                   sw      %0, 156(%2);  \
-                   sw      %6, 160(%2);  \
-                   sw      %7, 164(%2);  \
+                   sw      %4, 152(%2);  \
+                   sw      %5, 156(%2);  \
+                   sw      x0, 160(%2);  \
+                   sw      %6, 164(%2);  \
+                   sw      %7, 168(%2);  \
                    sw      %8, 144(%2);  \
                    lw      %0, 128(%2);  \
                    lw      %1, 132(%2);  \

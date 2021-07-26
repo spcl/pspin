@@ -15,7 +15,6 @@
 #ifndef HOST
 #include <handler.h>
 #include <packets.h>
-#include <spin_dma.h>
 #else
 #include <handler_profiler.h>
 #endif
@@ -39,8 +38,9 @@ __handler__ void copy_to_host_ph(handler_args_t *args)
 
     uint64_t host_address = task->host_mem_high;
     host_address = (host_address << 32) | (task->host_mem_low);
-    spin_dma_to_host(host_address, (uint32_t) nic_pld_addr, pkt_pld_len, 1, &dma);
-
+    //spin_dma_to_host(host_address, (uint32_t) nic_pld_addr,NIC_TO_HOST, pkt_pld_len, 1, &dma);
+    spin_host_dma(host_address, (uint32_t) nic_pld_addr, NIC_TO_HOST, pkt_pld_len, &dma);
+    
     //It's not strictly necessary to wait. The hw will enforce that the feedback is not
     //sent until all commands issued by this handlers are completed.
 #ifdef WAIT_POLL

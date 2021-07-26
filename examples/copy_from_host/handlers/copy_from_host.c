@@ -15,7 +15,6 @@
 #ifndef HOST
 #include <handler.h>
 #include <packets.h>
-#include <spin_dma.h>
 #else
 #include <handler_profiler.h>
 #endif
@@ -48,12 +47,12 @@ __handler__ void copy_from_host_ph(handler_args_t *args)
 
     uint64_t host_address = task->host_mem_high;
     host_address = (host_address << 32) | (task->host_mem_low);
-    spin_dma_from_host(host_address, (uint32_t) nic_pld_addr, pkt_pld_len, 1, &dma);
+    spin_host_dma(host_address, (uint32_t) nic_pld_addr, HOST_TO_NIC, pkt_pld_len, &dma);
 
     spin_cmd_wait(dma);
 
     spin_cmd_t send;
-    spin_send_packet(nic_pld_addr, pkt_pld_len, &send);
+    spin_nic_packet_send(nic_pld_addr, pkt_pld_len, &send);
 }
 
 void init_handlers(handler_fn * hh, handler_fn *ph, handler_fn *th, void **handler_mem_ptr)
