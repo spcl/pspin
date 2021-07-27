@@ -49,7 +49,7 @@ module cluster_cmd #(
     logic [NUM_CORES-1:0] intf_selector;
     logic uncluster_cmd_resp_valid;
 
-    assign uncluster_cmd_resp_valid = (uncluster_cmd_resp_valid_i && dma_cmd_resp_i.cmd_id.cluster_id == cluster_id_i);
+    assign uncluster_cmd_resp_valid = (uncluster_cmd_resp_valid_i && uncluster_cmd_resp_i.cmd_id.cluster_id == cluster_id_i);
 
     for (genvar i = 0; i < NUM_CORES; i++) begin : gen_cmds_selector
         assign intf_selector[i] = (cmd_i[i].to_uncluster) ? 1'b1 : 1'b0;
