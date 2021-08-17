@@ -41,6 +41,7 @@ public:
     typedef DMAEngine<AXIPort<uint32_t, uint64_t>>::mst_read_cb_t ReadCompletedCallback;
     typedef DMATarget<AXIPort<uint64_t, uint64_t>>::slv_write_cb_t HostWriteCallback;
     typedef DMATarget<AXIPort<uint64_t, uint64_t>>::slv_read_cb_t HostReadCallback;
+    typedef NOSlave::cmd_id_t CommandID;
 
 public:
     PsPINCoreSim(std::string vcd_file_path);
@@ -69,6 +70,7 @@ public:
     // PsPIN -> NIC outbound
     bool setNICCommandStatus(bool blocked);
     int setNICCommandCallback(NICCommandCallback cb);
+    void sendNICCommandCompletion(CommandID id) { no_ctrl_slv->send_completion(id); }
 
     // PsPIN -> Host
     bool setHostWriteStatus(bool blocked);
@@ -84,6 +86,9 @@ public:
 
     // Stats
     void printStats();
+
+    // Utils
+    static int findHandlerByName(const char *binfile, const char* handler_name, uint32_t *handler_addr, size_t *handler_size);
 
     ~PsPINCoreSim()
     {

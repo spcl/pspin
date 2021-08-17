@@ -29,6 +29,7 @@ namespace PsPIN
     class NOSlave: public SimModule
     {
     public:
+        typedef uint8_t cmd_id_t;
         class NICCommand 
         {
             public:
@@ -36,7 +37,7 @@ namespace PsPIN
                 uint32_t length;
                 uint32_t nid;
                 uint32_t fid;
-                uint8_t cmd_id;
+                cmd_id_t cmd_id;
         };
 
         typedef std::function<void(NICCommand)> NICCommandCallback;
@@ -46,6 +47,8 @@ namespace PsPIN
         uint32_t total_cmds;
         bool block_cmds;
         NICCommandCallback command_cb;
+
+        std::queue<cmd_id_t> response_queue;
 
     public:
         NOSlave(no_cmd_port_t &no_cmd) 
@@ -63,6 +66,7 @@ namespace PsPIN
         void posedge()
         {
             handle_cmd_posedge();
+            progress_completions();
         }
 
         void negedge()
@@ -80,6 +84,11 @@ namespace PsPIN
 
         void unblock() {
             block_cmds = false;
+        }
+
+        void send_completion(cmd_id_t cmd_id)
+        {
+            response_queue.push(cmd_id);
         }
 
         bool is_blocked() {
@@ -107,6 +116,17 @@ namespace PsPIN
 
                 *no_cmd.no_cmd_req_ready_o = 1;
             }
+        }
+
+        void progress_completions()
+        {
+            *no_cmd.no_cmd_resp_valid_o = 0;
+            if (response_queue.empty()) return;
+
+            cmd_id_t cmd_id = response_queue.front();
+            response_queue.pop();
+            *no_cmd.no_cmd_resp_valid_o = 1;
+            *no_cmd.no_cmd_resp_id_o = cmd_id;
         }
     };
 }

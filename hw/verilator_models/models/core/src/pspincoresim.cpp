@@ -16,6 +16,9 @@
 
 using namespace PsPIN;
 
+#include <elf.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
 #include "AXIPort.hpp"
 #include "pspin.hpp"
 
@@ -157,4 +160,61 @@ bool PsPINCoreSim::setHostReadStatus(bool blocked)
     else host_data_slv->unblock_reads();
     
     return status;
+}
+
+int PsPINCoreSim::findHandlerByName(const char *binfile, const char* handler_name, uint32_t *handler_addr, size_t *handler_size)
+{
+    struct stat sb;
+    FILE *f = fopen(binfile, "rb");
+    int fno = fileno(f);
+    fstat(fno, &sb);
+
+    Elf32_Ehdr *elf_ptr = (Elf32_Ehdr*) mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fno, 0);
+    uint32_t num_sections = elf_ptr->e_shnum;
+
+    Elf32_Shdr *section_header_table = (Elf32_Shdr *)(((uint8_t *)elf_ptr) + elf_ptr->e_shoff);
+
+    Elf32_Shdr *section_header_string_table = &(section_header_table[elf_ptr->e_shstrndx]);
+    char *sec_string_table = (char *)(((uint8_t *)elf_ptr) + section_header_string_table->sh_offset);
+
+    //find string table for the symbols
+    char *sym_string_tab = NULL;
+    for (int i = 0; i < num_sections; i++)
+    {
+        //printf("section: %s\n", sec_string_table + section_header_table[i].sh_name);
+        char *sec_name = sec_string_table + section_header_table[i].sh_name;
+        if (!strcmp(sec_name, ".strtab"))
+        {
+            sym_string_tab = (char *)(((uint8_t *)elf_ptr) + section_header_table[i].sh_offset);
+        }
+    }
+    assert(sym_string_tab != NULL);
+
+    for (int i = 0; i < num_sections; i++)
+    {
+        if (section_header_table[i].sh_type == SHT_SYMTAB)
+        {
+            //printf("sh type: %u; sh addr: %x\n", section_header_table[i].sh_type, section_header_table[i].sh_addr);
+
+            Elf32_Sym *symbol_table = (Elf32_Sym *)(((uint8_t *)elf_ptr) + section_header_table[i].sh_offset);
+            uint32_t num_symbols = section_header_table[i].sh_size / sizeof(Elf32_Sym);
+
+            for (int j = 0; j < num_symbols; j++)
+            {
+                char *sym_name = sym_string_tab + symbol_table[j].st_name;
+
+                if (!strcmp(sym_name, handler_name))
+                {
+                    *handler_addr = symbol_table[j].st_value;
+                    *handler_size = 4096;
+                    break;
+                }
+            }
+        }
+    }
+
+    munmap(elf_ptr, sb.st_size);
+    fclose(f);
+
+    return SPIN_SUCCESS;
 }

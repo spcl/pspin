@@ -187,8 +187,7 @@ namespace PsPIN
 
                 assert(!in_flight_reads.empty());
                 read_descr_t &read_descr = in_flight_reads.front();
-
-                assert(read_descr.offset + length < read_descr.len);
+                assert(read_descr.offset + length <= read_descr.len);
                 uint8_t *dest_ptr = read_descr.data + read_descr.offset;
                 read_descr.offset += length;
 
