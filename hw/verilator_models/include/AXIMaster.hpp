@@ -18,7 +18,6 @@
 
 namespace PsPIN
 {
-
     template <typename AXIPortType>
     class AXIMaster : public AXIDriver<AXIPortType>
     {

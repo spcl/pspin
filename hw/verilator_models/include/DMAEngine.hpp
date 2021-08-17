@@ -24,22 +24,27 @@
 #include <queue>
 #include <stdio.h>
 
+#define DEFAULT_BUFF_SIZE 32
+
 namespace PsPIN
 {
     using std::placeholders::_1;
 
+    /** 
+     * Simple DMAEngine that takes a memcpy like interface as commands. 
+     */
     template <typename AXIPortType>
-    class PCIeMaster : public SimModule
+    class DMAEngine : public SimModule
     {
 
     public:
-        typedef std::function<void(void*)> mst_write_cb_t;
-        typedef std::function<void(void*)> mst_read_cb_t;
+        typedef std::function<void(void)> mst_write_cb_t;
+        typedef std::function<void(void)> mst_read_cb_t;
 
     private:
         typedef struct write_descr
         {
-            void *user_ptr;
+            mst_write_cb_t cb;
         } write_descr_t;
 
         typedef struct read_descr
@@ -47,7 +52,7 @@ namespace PsPIN
             uint8_t *data;
             uint32_t offset;
             size_t len;
-            void *user_ptr;
+            mst_read_cb_t cb;
         } read_descr_t;
 
     private:
@@ -55,50 +60,61 @@ namespace PsPIN
         std::queue<read_descr_t> in_flight_reads;
         std::queue<write_descr_t> in_flight_writes;
 
-        mst_write_cb_t write_cb;
-        mst_read_cb_t read_cb;
-
         uint32_t bytes_written, bytes_read;
+        uint32_t write_buff_size;
+        uint32_t read_buff_size;
 
     public:
-        PCIeMaster<AXIPortType>(AXIPortType &axi_mst) 
+        DMAEngine<AXIPortType>(AXIPortType &axi_mst) 
         : axi_driver(axi_mst)
         {
             bytes_written = 0;
             bytes_read = 0;
+            write_buff_size = DEFAULT_BUFF_SIZE;
+            read_buff_size = DEFAULT_BUFF_SIZE;
         }
 
-        void nic_mem_write(uint32_t nic_mem_addr, uint8_t *data, size_t len, void *user_ptr)
+        bool can_write() {
+            return in_flight_writes.size() < write_buff_size;
+        }
+
+        bool can_read() {
+            return in_flight_reads.size() < read_buff_size;
+        }
+
+        void set_write_buff_size(uint32_t size)
         {
+            write_buff_size = size;
+        }
+
+        void set_read_buff_size(uint32_t size) 
+        {
+            read_buff_size = size;
+        }
+
+        void write(uint32_t nic_mem_addr, uint8_t *data, size_t len, mst_write_cb_t cb)
+        {
+            assert(can_write());
             write_descr_t write;
-            write.user_ptr = user_ptr;
+            write.cb = cb;
             axi_driver.write(nic_mem_addr, data, len, 0);
             in_flight_writes.push(write);
 
             bytes_written += len;
         }
 
-        void nic_mem_read(uint32_t nic_mem_addr, uint8_t *data, size_t len, void *user_ptr)
+        void read(uint32_t nic_mem_addr, uint8_t *data, size_t len, mst_read_cb_t cb)
         {
+            assert(can_read());
             read_descr_t read;
             read.data = data;
             read.offset = 0;
             read.len = len;
-            read.user_ptr = user_ptr;
+            read.cb = cb;
             axi_driver.read(nic_mem_addr, len);
             in_flight_reads.push(read);
 
             bytes_read += len;
-        }
-
-        void set_mst_write_cb(mst_write_cb_t wb)
-        {
-            this->write_cb = wb;
-        }
-
-        void set_mst_read_cb(mst_read_cb_t rb)
-        {
-            this->read_cb = rb;
         }
 
     private:
@@ -148,7 +164,7 @@ namespace PsPIN
             {
                 assert(!in_flight_writes.empty());
                 write_descr_t &write_descr = in_flight_writes.front();
-                if (write_cb) write_cb(write_descr.user_ptr);
+                if (write_descr.cb) write_descr.cb();
                 in_flight_writes.pop();
             }
         }
@@ -183,7 +199,7 @@ namespace PsPIN
                 {
                     // read complete
                     assert(read_descr.offset == read_descr.len);
-                    if (read_cb) read_cb(read_descr.user_ptr);
+                    if (read_descr.cb) read_descr.cb();
                     in_flight_reads.pop();
                 }
             }

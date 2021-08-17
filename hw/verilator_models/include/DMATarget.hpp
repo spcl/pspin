@@ -25,14 +25,16 @@
 #include <queue>
 #include <stdio.h>
 
+
+// NOTE: the abstraction for reads is slightly broken. We should have a callback for read requests and then let the caller
+// feed data with R beats.
 namespace PsPIN
 {
     using std::placeholders::_1;
 
     template <typename AXISlvPortType>
-    class PCIeSlave : public SimModule
+    class DMATarget : public SimModule
     {
-    
         typedef typename AXISlave<AXISlvPortType>::w_beat_request_t w_beat_request_t;
         typedef typename AXISlave<AXISlvPortType>::r_beat_request_t r_beat_request_t;
 
@@ -52,8 +54,8 @@ namespace PsPIN
     private:
         AXISlave<AXISlvPortType> axi_driver_slv;
 
-        uint32_t pcie_L;
-        double pcie_G;
+        uint32_t model_L;
+        double model_G;
 
         uint32_t write_wait_cycles;
         uint32_t read_wait_cycles;
@@ -76,12 +78,18 @@ namespace PsPIN
         uint32_t num_reads;
         uint32_t num_writes;
 
+        bool writes_blocked;
+        bool reads_blocked;
+
+        uint32_t write_buff_size;
+        uint32_t read_buff_size;
+
         slv_write_cb_t slv_write_cb;
         slv_read_cb_t slv_read_cb;
 
     public:
-        PCIeSlave(AXISlvPortType &axi_slv, uint32_t aw_buffer_size, uint32_t w_buffer_size, uint32_t ar_buffer_size, uint32_t r_buffer_size, uint32_t b_buffer_size, uint32_t pcie_L, double pcie_G)
-        : axi_driver_slv(axi_slv), pcie_L(pcie_L), pcie_G(pcie_G)
+        DMATarget(AXISlvPortType &axi_slv, uint32_t model_L, double model_G, uint32_t write_buff_size = 32, uint32_t read_buff_size = 32, uint32_t aw_buffer_size = 32, uint32_t w_buffer_size = 32, uint32_t ar_buffer_size = 32, uint32_t r_buffer_size = 32, uint32_t b_buffer_size = 32)
+        : axi_driver_slv(axi_slv), model_L(model_L), model_G(model_G)
         {
             write_wait_cycles = 0;
             read_wait_cycles = 0;
@@ -100,6 +108,9 @@ namespace PsPIN
             time_last_read = 0;
             num_reads = 0;
             num_writes = 0;
+
+            writes_blocked = false;
+            reads_blocked = false;
         }
 
         void set_slv_write_cb(slv_write_cb_t cb)
@@ -112,6 +123,13 @@ namespace PsPIN
             this->slv_read_cb = cb;
         }
 
+        void block_writes() { writes_blocked = true; }
+        void unblock_writes() { writes_blocked = false; }
+        bool is_write_blocked() { return writes_blocked; }
+        void block_reads() { reads_blocked = true; }
+        void unblock_reads() { reads_blocked = false; }
+        bool is_read_blocked() { return reads_blocked; }
+
     private: 
 
         void progress_new_writes() 
@@ -121,17 +139,17 @@ namespace PsPIN
                 if (write_wait_cycles > 0) return;
             }
 
-            if (axi_driver_slv.has_w_beat()) 
+            if (axi_driver_slv.has_w_beat() && in_flight_write_requests.size() < write_buff_size) 
             {
                 w_beat_request_t w_beat_req = axi_driver_slv.get_next_w_beat();
 
                 pcie_write_t write;
                 write.req = w_beat_req;
-                write.time = sim_time() + pcie_L;
+                write.time = sim_time() + model_L;
 
                 in_flight_write_requests.push(write);
 
-                write_wait_cycles = (uint32_t) (pcie_G * w_beat_req.data_size);
+                write_wait_cycles = (uint32_t) (model_G * w_beat_req.data_size);
                 //SIM_PRINT("PCIe write wait cycles: %u\n", write_wait_cycles);
             }
         }
@@ -143,7 +161,7 @@ namespace PsPIN
 
             pcie_write_t &write = in_flight_write_requests.front();
 
-            if (sim_time() >= write.time && axi_driver_slv.can_send_b_beat())
+            if (sim_time() >= write.time && axi_driver_slv.can_send_b_beat() && !is_write_blocked())
             {
                 // TODO: consume data here!
                 assert(write.req.w_beat.w_strb>0);
@@ -179,17 +197,17 @@ namespace PsPIN
                 return;
             }
 
-            if (axi_driver_slv.has_r_beat()) 
+            if (axi_driver_slv.has_r_beat() && in_flight_read_requests.size() < read_buff_size) 
             {
                 r_beat_request_t r_beat_req = axi_driver_slv.get_next_r_beat();
 
                 pcie_read_t read;
                 read.req = r_beat_req;
-                read.time = sim_time() + pcie_L;
+                read.time = sim_time() + model_L;
 
                 in_flight_read_requests.push(read);
                 
-                read_wait_cycles = (uint32_t) (pcie_G * r_beat_req.data_size);
+                read_wait_cycles = (uint32_t) (model_G * r_beat_req.data_size);
             }
         }
 
@@ -200,7 +218,7 @@ namespace PsPIN
 
             pcie_read_t &read = in_flight_read_requests.front();
 
-            if (sim_time() >= read.time && axi_driver_slv.can_send_r_beat())
+            if (sim_time() >= read.time && axi_driver_slv.can_send_r_beat() && !is_read_blocked())
             {
                 // TODO: copy data here (memcpy in read.req.r_beat.r_data)!
                 SIM_PRINT("PCIe: got read request (data size: %d)!\n", read.req.data_size);
