@@ -131,13 +131,13 @@ namespace PsPIN
             return !r_queue.empty();
         }
 
-        bool consume_r_beat(uint8_t *data, uint32_t &data_length)
+        bool consume_r_beat(uint8_t *data, uint32_t &data_length, uint32_t offset = 0)
         {
             assert(has_r_beat());
             axi_r_buffered_t r = r_queue.front();
             data_length = std::min(data_length, r.data_length);
             if (data!=NULL) {
-                memcpy(data, &(r.data[0]), data_length);
+                memcpy(data, ((uint8_t*) &(r.data[0])) + offset, data_length);
             }
             bool read_complete = r.is_last;
             r_queue.pop();

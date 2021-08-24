@@ -53,6 +53,7 @@ namespace PsPIN
             uint32_t offset;
             size_t len;
             mst_read_cb_t cb;
+            uint32_t alignment_offset;
         } read_descr_t;
 
     private:
@@ -110,6 +111,7 @@ namespace PsPIN
             read.data = data;
             read.offset = 0;
             read.len = len;
+            read.alignment_offset = nic_mem_addr % AXI_SW;
             read.cb = cb;
             axi_driver.read(nic_mem_addr, len);
             in_flight_reads.push(read);
@@ -187,6 +189,13 @@ namespace PsPIN
                 
                 assert(!in_flight_reads.empty());
                 read_descr_t &read_descr = in_flight_reads.front();
+
+                uint32_t port_offset = 0;
+                if (read_descr.alignment_offset>0 && read_descr.offset == 0) {
+                    port_offset = read_descr.alignment_offset;
+                    printf("Warning: the read is not 64 B aligned (offset: %d)!\n", port_offset);
+                }
+
                 if (read_descr.offset + length > read_descr.len) {
                     printf("Warning: read_descr.offset + length <= read_descr.len. read_descr.offset: %d; read_descr.len: %d; length: %d\n", read_descr.offset, read_descr.len, length);
                 }
@@ -198,7 +207,7 @@ namespace PsPIN
                 read_descr.offset += actual_len;
 
                 //do something with this data
-                read_complete = axi_driver.consume_r_beat(dest_ptr, actual_len);
+                read_complete = axi_driver.consume_r_beat(dest_ptr, actual_len, port_offset);
 
                 if (read_complete)
                 {
