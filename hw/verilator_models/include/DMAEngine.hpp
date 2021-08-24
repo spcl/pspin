@@ -192,13 +192,13 @@ namespace PsPIN
                 }
 
                 uint32_t bytes_left = read_descr.len - read_descr.offset;
-                uint32_t actualy_len = (bytes_left < length) ? bytes_left : length;
+                uint32_t actual_len = (bytes_left < length) ? bytes_left : length;
 
                 uint8_t *dest_ptr = read_descr.data + read_descr.offset;
-                read_descr.offset += actualy_len;
+                read_descr.offset += actual_len;
 
                 //do something with this data
-                read_complete = axi_driver.consume_r_beat(dest_ptr, actualy_len);
+                read_complete = axi_driver.consume_r_beat(dest_ptr, actual_len);
 
                 if (read_complete)
                 {
