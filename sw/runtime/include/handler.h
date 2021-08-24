@@ -183,7 +183,7 @@ static inline int spin_cmd_test(spin_cmd_t handle, bool *completed)
     return SPIN_OK;
 } 
 
-static inline int spin_rdma_put(uint32_t dest, void *data, uint32_t length, uint32_t stream_cmd, spin_cmd_t *handle)
+static inline int spin_rdma_put(uint32_t dest, void *data, uint32_t length, uint32_t sput_len, uint32_t stream_cmd, spin_cmd_t *handle)
 {
     uint32_t fid = stream_cmd;
     uint32_t src_addr_high = 0;
@@ -196,9 +196,10 @@ static inline int spin_rdma_put(uint32_t dest, void *data, uint32_t length, uint
                    sw      %5, 152(%1);  \
                    sw      %4, 156(%1);  \
                    sw      %6, 160(%1);  \
-                   sw      %7, 140(%1);  \
+                   sw      %7, 164(%1);  \
+                   sw      %8, 140(%1);  \
                    lw      %0, 128(%1);  \
-    " : "=r"(res) : "r"(base_addr), "r"(dest), "r"(fid), "r"(src_addr_high), "r"((uint32_t)data), "r"(length), "r"(cmd_info));       
+    " : "=r"(res) : "r"(base_addr), "r"(dest), "r"(fid), "r"(src_addr_high), "r"((uint32_t)data), "r"(length), "r"(sput_len), "r"(cmd_info));       
     
     *handle = res;
     return SPIN_OK;

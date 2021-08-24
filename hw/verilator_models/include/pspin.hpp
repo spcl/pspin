@@ -58,20 +58,20 @@
         (DST)->eos_o = &tb->eos_i;                                                                            \
     }
 
-#define NO_CMD_PORT_ASSIGN(SRC, SRC_PREFIX, DST)                                        \
-    {                                                                                   \
-        (DST)->no_cmd_req_ready_o = &((SRC)->EVALUATOR(SRC_PREFIX, req_ready_i));       \
-        (DST)->no_cmd_req_valid_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_valid_o));       \
-        (DST)->no_cmd_req_src_addr_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_src_addr_o)); \
-        (DST)->no_cmd_req_length_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_length_o));     \
-        (DST)->no_cmd_req_user_ptr_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_user_ptr_o)); \
-        (DST)->no_cmd_req_id_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_id_o));             \
-        (DST)->no_cmd_req_nid_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_nid_o));           \
-        (DST)->no_cmd_req_fid_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_fid_o));           \
-        (DST)->no_cmd_resp_valid_o = &((SRC)->EVALUATOR(SRC_PREFIX, resp_valid_i));     \
-        (DST)->no_cmd_resp_id_o = &((SRC)->EVALUATOR(SRC_PREFIX, resp_id_i));           \
+#define NO_CMD_PORT_ASSIGN(SRC, SRC_PREFIX, DST)                                              \
+    {                                                                                         \
+        (DST)->no_cmd_req_ready_o = &((SRC)->EVALUATOR(SRC_PREFIX, req_ready_i));             \
+        (DST)->no_cmd_req_valid_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_valid_o));             \
+        (DST)->no_cmd_req_src_addr_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_src_addr_o));       \
+        (DST)->no_cmd_req_length_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_length_o));           \
+        (DST)->no_cmd_req_sput_length_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_sput_length_o)); \
+        (DST)->no_cmd_req_user_ptr_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_user_ptr_o));       \
+        (DST)->no_cmd_req_id_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_id_o));                   \
+        (DST)->no_cmd_req_nid_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_nid_o));                 \
+        (DST)->no_cmd_req_fid_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_fid_o));                 \
+        (DST)->no_cmd_resp_valid_o = &((SRC)->EVALUATOR(SRC_PREFIX, resp_valid_i));           \
+        (DST)->no_cmd_resp_id_o = &((SRC)->EVALUATOR(SRC_PREFIX, resp_id_i));                 \
     }
-
 namespace PsPIN
 {
 
@@ -157,6 +157,7 @@ namespace PsPIN
         uint8_t *no_cmd_req_valid_i;
         uint64_t *no_cmd_req_src_addr_i;
         uint32_t *no_cmd_req_length_i;
+        uint32_t *no_cmd_req_sput_length_i;
         uint64_t *no_cmd_req_user_ptr_i;
         uint8_t *no_cmd_req_id_i;
         uint32_t *no_cmd_req_nid_i;

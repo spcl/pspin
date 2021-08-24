@@ -265,12 +265,13 @@ package automatic pspin_cfg_pkg;
 
   //NIC put/send command (224 b, padded to 76 B)
   typedef struct packed {
-      logic [383:0] unused;     // 384b
-      user_ptr_t    user_ptr;   // 64b
-      mem_size_t    length;     // 32b
-      host_addr_t   src_addr;   // 64b
-      fid_t         fid;        // 32b unused
-      nid_t         nid;        // 32b
+      logic [351:0] unused;        // 352b
+      user_ptr_t    user_ptr;      // 64b
+      mem_size_t    sput_length;   // 32b ==length if it's not a streaming put
+      mem_size_t    length;        // 32b
+      host_addr_t   src_addr;      // 64b
+      fid_t         fid;           // 32b 
+      nid_t         nid;           // 32b
   } nic_cmd_t;
 
   // Host <-> PsPIN DMA command (193 b, padded to 76 B)

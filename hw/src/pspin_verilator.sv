@@ -309,6 +309,7 @@ module pspin_verilator #(
     output fid_t                            nic_cmd_req_fid_o,
     output host_addr_t                      nic_cmd_req_src_addr_o,
     output mem_size_t                       nic_cmd_req_length_o,
+    output mem_size_t                       nic_cmd_req_sput_length_o,
     output user_ptr_t                       nic_cmd_req_user_ptr_o,
     
     input logic                             nic_cmd_resp_valid_i,
@@ -676,6 +677,7 @@ module pspin_verilator #(
     assign nic_cmd_req_fid_o                        = nic_cmd_req.descr.nic_cmd.fid;
     assign nic_cmd_req_src_addr_o                   = nic_cmd_req.descr.nic_cmd.src_addr;
     assign nic_cmd_req_length_o                     = nic_cmd_req.descr.nic_cmd.length;
+    assign nic_cmd_req_sput_length_o                = nic_cmd_req.descr.nic_cmd.sput_length;
     assign nic_cmd_req_user_ptr_o                   = nic_cmd_req.descr.nic_cmd.user_ptr;
 
     // Connecting NIC command response
