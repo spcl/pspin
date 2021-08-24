@@ -89,7 +89,7 @@ namespace PsPIN
 
     public:
         DMATarget(AXISlvPortType &axi_slv, uint32_t model_L, double model_G, uint32_t write_buff_size = 32, uint32_t read_buff_size = 32, uint32_t aw_buffer_size = 32, uint32_t w_buffer_size = 32, uint32_t ar_buffer_size = 32, uint32_t r_buffer_size = 32, uint32_t b_buffer_size = 32)
-        : axi_driver_slv(axi_slv), model_L(model_L), model_G(model_G)
+        : axi_driver_slv(axi_slv), model_L(model_L), model_G(model_G), write_buff_size(write_buff_size), read_buff_size(read_buff_size)
         {
             write_wait_cycles = 0;
             read_wait_cycles = 0;

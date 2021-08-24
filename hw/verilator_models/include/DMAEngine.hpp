@@ -184,7 +184,7 @@ namespace PsPIN
 
             if (axi_driver.has_r_beat())
             {
-                bool read_complete;
+                bool read_complete = false;
                 uint32_t length = AXI_SW;
                 
                 assert(!in_flight_reads.empty());
