@@ -184,15 +184,21 @@ namespace PsPIN
             {
                 bool read_complete;
                 uint32_t length = AXI_SW;
-
+                
                 assert(!in_flight_reads.empty());
                 read_descr_t &read_descr = in_flight_reads.front();
-                assert(read_descr.offset + length <= read_descr.len);
+                if (read_descr.offset + length > read_descr.len) {
+                    printf("Warning: read_descr.offset + length <= read_descr.len. read_descr.offset: %d; read_descr.len: %d; length: %d\n", read_descr.offset, read_descr.len, length);
+                }
+
+                uint32_t bytes_left = read_descr.len - read_descr.offset;
+                uint32_t actualy_len = (bytes_left < length) ? bytes_left : length;
+
                 uint8_t *dest_ptr = read_descr.data + read_descr.offset;
-                read_descr.offset += length;
+                read_descr.offset += actualy_len;
 
                 //do something with this data
-                read_complete = axi_driver.consume_r_beat(dest_ptr, length);
+                read_complete = axi_driver.consume_r_beat(dest_ptr, actualy_len);
 
                 if (read_complete)
                 {

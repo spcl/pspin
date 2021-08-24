@@ -27,7 +27,8 @@ __handler__ void test_ph(handler_args_t *args)
     printf("payload handler! pkt_id: 0x%lx\n", pkt_id);
 
     spin_cmd_t cmd;
-    spin_rdma_put(99, args->task->pkt_mem, args->task->pkt_mem_size, &cmd);
+    //spin_rdma_put(99, args->task->pkt_mem, args->task->pkt_mem_size, &cmd);
+    spin_dma_to_host(0xdeadbeefdeadbeef, 0xcafebebe, 4, 0, &cmd);
 }
 
 __handler__ void test_th(handler_args_t *args) 

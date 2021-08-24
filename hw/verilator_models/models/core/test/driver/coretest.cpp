@@ -111,6 +111,11 @@ static void nic_command_handler(PsPINCoreSim::NICCommand cmd)
     sim->nicMemRead(cmd.source_addr, (uint8_t*) &pkt_out_buff, cmd.length, cb);
 }
 
+static void host_write_callback(uint64_t host_ptr, uint8_t* data, size_t len)
+{
+    printf("NIC is writing %d bytes to host address %p\n", len, host_ptr);
+}
+
 int main(int argc, char** argv)
 {
 
@@ -121,6 +126,7 @@ int main(int argc, char** argv)
     tick = 0;
 
     sim->setNICCommandCallback(nic_command_handler);
+    sim->setHostWriteCallback(host_write_callback);
 
     packet_t pkt;
     pkt.id = 0xdeadbeef;

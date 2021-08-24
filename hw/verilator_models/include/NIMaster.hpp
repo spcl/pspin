@@ -151,7 +151,7 @@ namespace PsPIN
                 return;
             }
 
-            her_entry_t her_entry = ready_hers.front();
+            her_entry_t &her_entry = ready_hers.front();
             her_descr_t *her = her_entry.descr;
 
             *ni_ctrl.her_o.msgid = her->msgid;
@@ -180,14 +180,14 @@ namespace PsPIN
 
             *ni_ctrl.her_valid_o = 1;
 
-            ready_hers.pop();
-
             SIM_PRINT("HER sent (0x%x)\n", *ni_ctrl.her_o.her_addr);
 
             her_entry.pspin_arrival_time = sim_time();
   
             assert(pktmap.find(*ni_ctrl.her_o.her_addr) == pktmap.end());
             pktmap[*ni_ctrl.her_o.her_addr] = her_entry;
+
+            ready_hers.pop();
 
             //stats
             total_bytes_sent += her->her_size;

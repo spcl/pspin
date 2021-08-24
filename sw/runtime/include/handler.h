@@ -183,9 +183,9 @@ static inline int spin_cmd_test(spin_cmd_t handle, bool *completed)
     return SPIN_OK;
 } 
 
-static inline int spin_rdma_put(uint32_t dest, void *data, uint32_t length, spin_cmd_t *handle)
+static inline int spin_rdma_put(uint32_t dest, void *data, uint32_t length, uint32_t stream_cmd, spin_cmd_t *handle)
 {
-    uint32_t fid = 1 /* >1 is RDMA */;
+    uint32_t fid = stream_cmd;
     uint32_t src_addr_high = 0;
     uint32_t cmd_info = 2;
     //length, src_addr_low, src_addr_high, fid, nid
