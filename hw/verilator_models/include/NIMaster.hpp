@@ -91,8 +91,8 @@ namespace PsPIN
             her_entry_t entry;
             entry.descr = her;
             entry.cb = cb;
-            ready_hers.push(entry);
             entry.nic_arrival_time = sim_time();
+            ready_hers.push(entry);
             return 0;
         } 
 
