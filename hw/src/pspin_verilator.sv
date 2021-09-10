@@ -310,6 +310,7 @@ module pspin_verilator #(
     output host_addr_t                      nic_cmd_req_src_addr_o,
     output mem_size_t                       nic_cmd_req_length_o,
     output mem_size_t                       nic_cmd_req_sput_length_o,
+    output mem_size_t                       nic_cmd_req_roffset_o,
     output user_ptr_t                       nic_cmd_req_user_ptr_o,
     
     input logic                             nic_cmd_resp_valid_i,
@@ -404,7 +405,7 @@ module pspin_verilator #(
             initial begin
                 //$readmemh($sformatf("../sim_files/slm_files/l2_hnd_%01d_%01d.slm", iRow, iCol),
                 //$display($sformatf(get_l2_handler_slm_path(), iRow, iCol));
-                $readmemh({get_slm_path(), $sformatf("l2_hnd_%01d_%01d.slm", iRow, iCol)},
+                $readmemh({get_slm_path(), $sformatf("/l2_hnd_%01d_%01d.slm", iRow, iCol)},
                 i_pspin.i_l2_hnd_mem.gen_cols[iCol].gen_rows[iRow].i_mem_cut.i_tc_sram.sram);
             end
         end
@@ -678,6 +679,7 @@ module pspin_verilator #(
     assign nic_cmd_req_src_addr_o                   = nic_cmd_req.descr.nic_cmd.src_addr;
     assign nic_cmd_req_length_o                     = nic_cmd_req.descr.nic_cmd.length;
     assign nic_cmd_req_sput_length_o                = nic_cmd_req.descr.nic_cmd.sput_length;
+    assign nic_cmd_req_roffset_o                    = nic_cmd_req.descr.nic_cmd.roffset;
     assign nic_cmd_req_user_ptr_o                   = nic_cmd_req.descr.nic_cmd.user_ptr;
 
     // Connecting NIC command response

@@ -265,8 +265,9 @@ package automatic pspin_cfg_pkg;
 
   //NIC put/send command (224 b, padded to 76 B)
   typedef struct packed {
-      logic [351:0] unused;        // 352b
+      logic [319:0] unused;        // 320b
       user_ptr_t    user_ptr;      // 64b
+      mem_size_t    roffset;       // 32b
       mem_size_t    sput_length;   // 32b ==length if it's not a streaming put
       mem_size_t    length;        // 32b
       host_addr_t   src_addr;      // 64b

@@ -65,6 +65,7 @@
         (DST)->no_cmd_req_src_addr_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_src_addr_o));       \
         (DST)->no_cmd_req_length_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_length_o));           \
         (DST)->no_cmd_req_sput_length_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_sput_length_o)); \
+        (DST)->no_cmd_req_roffset_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_roffset_o)); \
         (DST)->no_cmd_req_user_ptr_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_user_ptr_o));       \
         (DST)->no_cmd_req_id_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_id_o));                   \
         (DST)->no_cmd_req_nid_i = &((SRC)->EVALUATOR(SRC_PREFIX, req_nid_o));                 \
@@ -158,6 +159,7 @@ namespace PsPIN
         uint64_t *no_cmd_req_src_addr_i;
         uint32_t *no_cmd_req_length_i;
         uint32_t *no_cmd_req_sput_length_i;
+        uint32_t *no_cmd_req_roffset_i;
         uint64_t *no_cmd_req_user_ptr_i;
         uint8_t *no_cmd_req_id_i;
         uint32_t *no_cmd_req_nid_i;
