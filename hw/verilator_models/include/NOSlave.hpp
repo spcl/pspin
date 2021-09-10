@@ -36,6 +36,7 @@ namespace PsPIN
                 uint64_t source_addr;
                 uint32_t length;
                 uint32_t sput_length;
+                uint32_t roffset;
                 uint32_t nid;
                 uint32_t fid;
                 cmd_id_t cmd_id;
@@ -107,6 +108,7 @@ namespace PsPIN
                 cmd.source_addr = *no_cmd.no_cmd_req_src_addr_i;
                 cmd.length = *no_cmd.no_cmd_req_length_i;
                 cmd.sput_length = *no_cmd.no_cmd_req_sput_length_i;
+                cmd.roffset = *no_cmd.no_cmd_req_roffset_i;
                 cmd.nid = *no_cmd.no_cmd_req_nid_i;
                 cmd.fid = *no_cmd.no_cmd_req_fid_i;
                 cmd.cmd_id =  *no_cmd.no_cmd_req_id_i;
