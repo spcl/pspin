@@ -26,6 +26,7 @@ package automatic pspin_cfg_pkg;
 
   localparam int unsigned       C_SIZE_WIDTH            = AXI_AW;
   localparam int unsigned       C_MSGID_WIDTH           = 10;
+  localparam int unsigned       C_CLUSTERID_WIDTH       = 8;
   localparam int unsigned       C_ADDR_WIDTH            = AXI_AW;
   localparam int unsigned       C_HOST_ADDR_WIDTH       = HOST_AXI_AW;
   localparam int unsigned       NUM_CLUSTERS            = 4;
@@ -156,6 +157,7 @@ package automatic pspin_cfg_pkg;
   typedef struct packed {
 
     logic [C_MSGID_WIDTH-1:0]  msgid;
+    logic [C_CLUSTERID_WIDTH-1:0] home_cluster_id;
 
     logic                      eom;
 
@@ -172,6 +174,7 @@ package automatic pspin_cfg_pkg;
   typedef struct packed {
 
     logic [C_MSGID_WIDTH-1:0]       msgid;
+    logic [C_CLUSTERID_WIDTH-1:0]   home_cluster_id;
 
     mem_addr_t                      handler_fun;
     mem_size_t                      handler_fun_size;

@@ -270,6 +270,7 @@ module pspin_verilator #(
     output logic                            her_ready_o,
     input  logic                            her_valid_i,
     input  logic [C_MSGID_WIDTH-1:0]        her_msgid_i,
+    input  logic [C_CLUSTERID_WIDTH-1:0]    her_homeclusterid_i,
     input  logic                            her_is_eom_i,
     input  mem_addr_t                       her_addr_i,
     input  mem_size_t                       her_size_i,
@@ -644,6 +645,7 @@ module pspin_verilator #(
 
     // Connecting her_descr
     assign her_descr.msgid                          = her_msgid_i;
+    assign her_descr.home_cluster_id                = her_homeclusterid_i;
     assign her_descr.eom                            = her_is_eom_i;
     assign her_descr.her_addr                       = her_addr_i;
     assign her_descr.her_size                       = her_size_i;

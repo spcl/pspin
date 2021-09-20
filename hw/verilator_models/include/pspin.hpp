@@ -27,6 +27,7 @@
         (DST)->her_valid_o = &((SRC)->EVALUATOR(SRC_PREFIX, valid_i));                                        \
         (DST)->her_o.msgid = &((SRC)->EVALUATOR(SRC_PREFIX, msgid_i));                                        \
         (DST)->her_o.eom = &((SRC)->EVALUATOR(SRC_PREFIX, is_eom_i));                                         \
+        (DST)->her_o.home_cluster_id = &((SRC)->EVALUATOR(SRC_PREFIX, homeclusterid_i));                      \
         (DST)->her_o.her_addr = &((SRC)->EVALUATOR(SRC_PREFIX, addr_i));                                      \
         (DST)->her_o.her_size = &((SRC)->EVALUATOR(SRC_PREFIX, size_i));                                      \
         (DST)->her_o.her_size = &((SRC)->EVALUATOR(SRC_PREFIX, size_i));                                      \
@@ -81,6 +82,7 @@ namespace PsPIN
     typedef struct her_descr
     {
         uint32_t msgid;
+        uint8_t  home_cluster_id;
         uint8_t eom;
 
         //full her descriptor
@@ -127,6 +129,7 @@ namespace PsPIN
     typedef struct her_descr_p
     {
         uint16_t *msgid;
+        uint8_t *home_cluster_id;
         uint8_t *eom;
 
         //full her descriptor
