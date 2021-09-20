@@ -47,6 +47,7 @@ module mpq_engine #(
     typedef struct packed {
         mem_addr_t pkt_addr;
         mem_size_t pkt_size;
+        logic [C_CLUSTERID_WIDTH-1:0] home_cluster_id;
     } mpq_pkt_t;
 
     localparam int unsigned MPQ_META_LEN   = $bits(mpq_meta_t);
@@ -134,8 +135,9 @@ module mpq_engine #(
     assign feedback_mpq_idx    = feedback_i.msgid[$clog2(NUM_MPQ)-1:0];
 
     // Here we store the packets that are queued for each MPQ
-    assign new_pkt.pkt_addr = her_i.her_addr;
-    assign new_pkt.pkt_size = her_i.xfer_size;
+    assign new_pkt.pkt_addr         = her_i.her_addr;
+    assign new_pkt.pkt_size         = her_i.xfer_size;
+    assign new_pkt.home_cluster_id  = her_i.home_cluster_id;
 
     assign fifo_push = her_ready_o && her_valid_i;
 
@@ -254,6 +256,7 @@ module mpq_engine #(
                 new_task.handler_fun_size = mpqmeta_read_mpq.hh_size;
                 new_task.pkt_addr = mpq_head.pkt_addr;
                 new_task.pkt_size = mpq_head.pkt_size;
+                new_task.home_cluster_id = mpq_head.home_cluster_id;
                 new_task.trigger_feedback = new_task_triggers_feedback_q;
             end
 
@@ -262,6 +265,7 @@ module mpq_engine #(
                 new_task.handler_fun_size = mpqmeta_read_mpq.ph_size;
                 new_task.pkt_addr = mpq_head.pkt_addr;
                 new_task.pkt_size = mpq_head.pkt_size;
+                new_task.home_cluster_id = mpq_head.home_cluster_id;
                 new_task.trigger_feedback = new_task_triggers_feedback_q;
             end
 
@@ -270,6 +274,7 @@ module mpq_engine #(
                 new_task.handler_fun_size = mpqmeta_read_mpq.th_size;
                 new_task.pkt_addr = mpq_head.pkt_addr;
                 new_task.pkt_size = mpq_head.pkt_size;
+                new_task.home_cluster_id = mpq_head.home_cluster_id;
                 new_task.trigger_feedback = new_task_triggers_feedback_q;
             end
 
@@ -278,6 +283,7 @@ module mpq_engine #(
                 new_task.handler_fun_size = '0;
                 new_task.pkt_addr = '0;
                 new_task.pkt_size = '0;
+                new_task.home_cluster_id = '0;
                 new_task.trigger_feedback = 1'b0;
             end
         endcase

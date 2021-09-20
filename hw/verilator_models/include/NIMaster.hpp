@@ -155,6 +155,7 @@ namespace PsPIN
             her_descr_t *her = her_entry.descr;
 
             *ni_ctrl.her_o.msgid = her->msgid;
+            *ni_ctrl.her_o.home_cluster_id = her->home_cluster_id;
             *ni_ctrl.her_o.eom = her->eom;
             *ni_ctrl.her_o.her_addr = her->her_addr;
             *ni_ctrl.her_o.her_size = her->her_size;

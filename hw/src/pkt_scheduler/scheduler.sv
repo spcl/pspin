@@ -132,7 +132,7 @@ module scheduler #(
 
     //home cluster is in the last clog(NUM_CLUSTERS) bits of msg_id
     logic [$clog2(NUM_CLUSTERS)-1:0] home_cluster_id;
-    assign home_cluster_id[$clog2(NUM_CLUSTERS)-1:0] = task_descr_i.msgid[$clog2(NUM_CLUSTERS)-1:0];
+    assign home_cluster_id[$clog2(NUM_CLUSTERS)-1:0] = task_descr_i.home_cluster_id[$clog2(NUM_CLUSTERS)-1:0];
 
     logic no_cluster_avail;
     logic can_use_home_cluster;

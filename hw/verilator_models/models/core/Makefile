@@ -12,7 +12,7 @@ VFLAGS_RELEASE=--Mdir obj_dir_release --sv -Wno-UNOPTFLAT -Wno-NOLATCH -Wno-WIDT
 VFLAGS_DEBUG=--Mdir obj_dir_debug --sv --assert --trace --trace-structs --trace-depth $(TRACE_DEPTH) -CFLAGS "-DVERILATOR_HAS_TRACE -fPIC" -Wno-UNOPTFLAT -Wno-NOLATCH -Wno-WIDTHCONCAT -j $(VERILATOR_COMPILER_WORKERS) +systemverilogext+sv -Wno-lint
 
 
-LIB_RELEASE_FLAGS=-fPIC --std=c++11 -Os -shared -Iobj_dir_release -I$(HW_ROOT)/verilator_models/include/ -I$(VERILATOR_ROOT)/include -I$(VERILATOR_ROOT)/include/vltstd/ -Iinclude/ 
+LIB_RELEASE_FLAGS=-fPIC -g --std=c++11 -Os -shared -Iobj_dir_release -I$(HW_ROOT)/verilator_models/include/ -I$(VERILATOR_ROOT)/include -I$(VERILATOR_ROOT)/include/vltstd/ -Iinclude/ 
 LIB_DEBUG_FLAGS=-fPIC -g --std=c++11 -Os -shared -Iobj_dir_debug -I$(HW_ROOT)/verilator_models/include/ -I$(VERILATOR_ROOT)/include -I$(VERILATOR_ROOT)/include/vltstd/ -Iinclude/ -DVERILATOR_HAS_TRACE
 
 EXE_RELEASE_FLAGS=-Iinclude/
