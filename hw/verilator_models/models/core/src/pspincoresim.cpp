@@ -54,6 +54,13 @@ PsPINCoreSim::PsPINCoreSim(std::string vcd_file_path)
 
     // Send reset signal
     sim->reset();
+
+    // wait for active signal
+    uint8_t done_flag;
+    while (!(*(ni_ctrl_mst_port.pspin_active_i))) {
+        step(&done_flag);
+        assert(!done_flag);
+    }
 }
 
 int PsPINCoreSim::run() 

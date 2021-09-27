@@ -193,6 +193,7 @@ namespace PsPIN
                 uint32_t port_offset = 0;
                 if (read_descr.alignment_offset>0 && read_descr.offset == 0) {
                     port_offset = read_descr.alignment_offset;
+                    length = length - port_offset;
                     printf("Warning: the read is not 64 B aligned (offset: %d)!\n", port_offset);
                 }
 
