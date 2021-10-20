@@ -82,7 +82,7 @@ double sc_time_stamp()
     return sim->time();
 }
 
-const char* get_slm_path()
+extern "C" const char* get_slm_path()
 {
     return slm_path;
 }
