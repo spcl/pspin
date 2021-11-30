@@ -2,7 +2,7 @@
 #define __SLP_L1_H__
 
 #define VECTOR_LEN 2
-#define DTYPE float
+#define DTYPE int32_t
 
 #define TY_FIT_DATA 0
 #define TY_END_FITTING 1
