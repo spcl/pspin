@@ -46,7 +46,7 @@ static INLINE DTYPE predict(const DTYPE input[VECTOR_LEN], const DTYPE weight[VE
   dot += weight[VECTOR_LEN];
   if (fit_lock)
     spin_rw_lock_r_unlock(fit_lock);
-  return dot;
+  return ACTIVATION_FN(dot);
 }
 
 // non-atomical in-place modification of weight
