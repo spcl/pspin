@@ -188,14 +188,14 @@ __handler__ void slp_l1_th(handler_args_t *args)
     uint64_t host_address = task->host_mem_high;
     host_address = (host_address << 32) | (task->host_mem_low);
 
-    uint32_t max_seq = 0;
+    uint32_t all_processed = 0;
     for (int i = 0; i < NB_CLUSTERS; ++i) {
-      uint32_t slave_seq = *(volatile uint32_t*)((uint8_t*)task->scratchpad[i] + sizeof(DTYPE) * (VECTOR_LEN + 1));
-      max_seq = max_seq > slave_seq ? max_seq : slave_seq;
+      uint32_t slave_processed = *(volatile uint32_t *)((uint8_t *)task->scratchpad[i] + sizeof(DTYPE) * (VECTOR_LEN + 1));
+      all_processed += slave_processed;
     }
     uint8_t *master_mem = (uint8_t*) (task->scratchpad[0]);
     DTYPE *hpu_weight = (DTYPE*)(master_mem);
-    printf("training end serial no: %d\n", max_seq);
+    printf("total training samples: %d\n", all_processed);
     printf("weight: %d %d %d\n", hpu_weight[0], hpu_weight[1], hpu_weight[2]);
 
     //signal that we completed so to let the host read the weight back
