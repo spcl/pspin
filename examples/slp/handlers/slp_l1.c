@@ -124,7 +124,7 @@ __handler__ void slp_l1_ph(handler_args_t *args)
     uint8_t *master_mem = (uint8_t*)(task->scratchpad[0]);
     //printf("type %#x count %d serial_no %d\n", hdr_ptr->type, hdr_ptr->count, hdr_ptr->serial_no);
 
-    volatile uint32_t *local_serial_no = (uint32_t*)(local_mem + (VECTOR_LEN + 1) * sizeof(DTYPE));
+    volatile uint32_t *processed_fits = (uint32_t*)(local_mem + (VECTOR_LEN + 1) * sizeof(DTYPE));
     DTYPE *fit_weight = (DTYPE *)(master_mem);
     spin_rw_lock_t *fit_lock = (spin_rw_lock_t *)(master_mem + sizeof(DTYPE) * (VECTOR_LEN + 1) + sizeof(uint32_t));
 
@@ -137,7 +137,8 @@ __handler__ void slp_l1_ph(handler_args_t *args)
     switch (hdr_ptr->type) {
       case TY_FIT_DATA:
         fit_batch(input_ptr, res_ptr, hdr_ptr->count, fit_weight, fit_lock);
-        amo_maxu(local_serial_no, hdr_ptr->serial_no);
+        // increase after finishing processing
+        amo_add(processed_fits, 1);
         break;
       case TY_PREDICT:
         while (!*predict_flag) {}
@@ -153,12 +154,13 @@ __handler__ void slp_l1_ph(handler_args_t *args)
         // get serial no for last fit
         uint32_t last_seq = *(uint32_t *)(input_ptr);
         while (true) {
-          uint32_t max_seq = 0;
+          uint32_t all_processed = 0;
           for (int i = 0; i < NB_CLUSTERS; ++i) {
-            uint32_t slave_seq = *(volatile uint32_t*)((uint8_t*)task->scratchpad[i] + sizeof(DTYPE) * (VECTOR_LEN + 1));
-            max_seq = max_seq > slave_seq ? max_seq : slave_seq;
+            uint32_t slave_processed = *(volatile uint32_t*)((uint8_t*)task->scratchpad[i] + sizeof(DTYPE) * (VECTOR_LEN + 1));
+            all_processed += slave_processed;
           }
-          if (max_seq == last_seq) break;
+          if (all_processed == last_seq + 1) // we have everyone finished
+            break;
         }
         spin_rw_lock_r_lock(fit_lock);
         for (int i = 1; i < NB_CLUSTERS; ++i) {
