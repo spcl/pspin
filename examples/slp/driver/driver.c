@@ -80,7 +80,7 @@ uint32_t fill_packet(uint32_t msg_idx, uint32_t pkt_idx, uint8_t *pkt_buff, uint
     if (pkt_idx < FIT_PKTS) {
       ty = TY_FIT_DATA;
       payload_len += (VECTOR_LEN + 1) * BATCH * sizeof(DTYPE);
-    } else if (pkt_idx < FIT_PKTS + 8) {
+    } else if (pkt_idx == FIT_PKTS) {
       ty = TY_END_FITTING;
       payload_len += sizeof(uint32_t);
     } else {
