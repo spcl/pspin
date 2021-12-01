@@ -25,6 +25,7 @@
 #define FIT_PKTS 32
 #define BATCH 8
 
+#ifdef USE_PRESET
 const DTYPE fit_data[8][2] = {
   8, 1,
   6, 1,
@@ -38,6 +39,7 @@ const DTYPE fit_data[8][2] = {
 const DTYPE fit_result[8] = {
   1, 1, 1, 0, 0, 1, 0, 0
 };
+#endif
 
 // final weight should be 2, -9, -1
 
@@ -119,13 +121,19 @@ uint32_t fill_packet(uint32_t msg_idx, uint32_t pkt_idx, uint8_t *pkt_buff, uint
 
     for (int i = 0; i < BATCH; ++i) {
       for (int k = 0; k < VECTOR_LEN; ++k) {
+#ifdef USE_PRESET
         pld_body[i * VECTOR_LEN + k] = ty == TY_FIT_DATA ? fit_data[i][k] : rand();
+#else
+        pld_body[i * VECTOR_LEN + k] = ty == rand();
+#endif
       }
       if (ty == TY_FIT_DATA) {
         DTYPE res = F(pld_body + i * VECTOR_LEN);
+#ifdef USE_PRESET
         if (res != fit_result[i]) {
           printf("ERR: result mismatch for sample %d\n", i);
         }
+#endif
         pld_body[BATCH * VECTOR_LEN + i] = res;
       }
     }
