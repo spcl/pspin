@@ -126,9 +126,9 @@ __handler__ void slp_l1_ph(handler_args_t *args)
 
     volatile uint32_t *local_serial_no = (uint32_t*)(local_mem + (VECTOR_LEN + 1) * sizeof(DTYPE));
     DTYPE *fit_weight = (DTYPE *)(master_mem);
-    spin_rw_lock_t *fit_lock = (spin_rw_lock_t *)(master_mem + sizeof(DTYPE) * (VECTOR_LEN + 1));
+    spin_rw_lock_t *fit_lock = (spin_rw_lock_t *)(master_mem + sizeof(DTYPE) * (VECTOR_LEN + 1) + sizeof(uint32_t));
 
-    volatile uint32_t *predict_flag = (uint32_t*)(master_mem + sizeof(DTYPE) * (VECTOR_LEN + 1) + sizeof(spin_rw_lock_t));
+    volatile uint32_t *predict_flag = (uint32_t*)(master_mem + sizeof(DTYPE) * (VECTOR_LEN + 1) + sizeof(uint32_t) + sizeof(spin_rw_lock_t));
     DTYPE *predict_weight = (DTYPE *)(local_mem);
 
     DTYPE *input_ptr = (DTYPE *)(pkt_pld_ptr + sizeof(slp_frame_hdr_t));
