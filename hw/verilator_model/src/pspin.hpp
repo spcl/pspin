@@ -49,13 +49,45 @@
         (DST)->her_o.mpq_meta.scratchpad_size[2] = &((SRC)->EVALUATOR(SRC_PREFIX, meta_scratchpad_2_size_i)); \
         (DST)->her_o.mpq_meta.scratchpad_addr[3] = &((SRC)->EVALUATOR(SRC_PREFIX, meta_scratchpad_3_addr_i)); \
         (DST)->her_o.mpq_meta.scratchpad_size[3] = &((SRC)->EVALUATOR(SRC_PREFIX, meta_scratchpad_3_size_i)); \
-        (DST)->pspin_active_i = &tb->pspin_active_o;                                                          \
-        (DST)->feedback_valid_i = &tb->feedback_valid_o;                                                      \
-        (DST)->feedback_ready_o = &tb->feedback_ready_i;                                                      \
-        (DST)->feedback_msgid_i = &tb->feedback_msgid_o;                                                      \
-        (DST)->feedback_her_addr_i = &tb->feedback_her_addr_o;                                                \
-        (DST)->feedback_her_size_i = &tb->feedback_her_size_o;                                                \
-        (DST)->eos_o = &tb->eos_i;                                                                            \
+        (DST)->pspin_active_i = &(SRC)->pspin_active_o;                                                         \
+        (DST)->feedback_valid_i = &(SRC)->feedback_valid_o;                                                     \
+        (DST)->feedback_ready_o = &(SRC)->feedback_ready_i;                                                     \
+        (DST)->feedback_msgid_i = &(SRC)->feedback_msgid_o;                                                     \
+        (DST)->feedback_her_addr_i = &(SRC)->feedback_her_addr_o;                                               \
+        (DST)->feedback_her_size_i = &(SRC)->feedback_her_size_o;                                               \
+        (DST)->eos_o = &(SRC)->eos_i;                                                                           \
+    }
+
+
+#define TASK_CTRL_PORT_ASSIGN(SRC, SRC_PREFIX, DST)                                                           \
+    {                                                                                                         \
+        (DST)->task_ready_i = &((SRC)->EVALUATOR(SRC_PREFIX, ready_o));                                       \
+        (DST)->task_valid_o = &((SRC)->EVALUATOR(SRC_PREFIX, valid_i));                                       \
+        (DST)->task_o.msgid = &((SRC)->EVALUATOR(SRC_PREFIX, msgid_i));                                       \
+        (DST)->task_o.pkt_addr = &((SRC)->EVALUATOR(SRC_PREFIX, pkt_addr_i));                                 \
+        (DST)->task_o.pkt_size = &((SRC)->EVALUATOR(SRC_PREFIX, pkt_size_i));                                 \
+        (DST)->task_o.l2_mem_addr = &((SRC)->EVALUATOR(SRC_PREFIX, l2_mem_addr_i));                           \
+        (DST)->task_o.l2_mem_size = &((SRC)->EVALUATOR(SRC_PREFIX, l2_mem_size_i));                           \
+        (DST)->task_o.host_mem_addr = &((SRC)->EVALUATOR(SRC_PREFIX, host_mem_addr_i));                       \
+        (DST)->task_o.host_mem_size = &((SRC)->EVALUATOR(SRC_PREFIX, host_mem_size_i));                       \
+        (DST)->task_o.handler_addr = &((SRC)->EVALUATOR(SRC_PREFIX, handler_addr_i));                         \
+        (DST)->task_o.handler_size = &((SRC)->EVALUATOR(SRC_PREFIX, handler_size_i));                         \
+        (DST)->task_o.scratchpad_addr[0] = &((SRC)->EVALUATOR(SRC_PREFIX, scratchpad_0_addr_i));              \
+        (DST)->task_o.scratchpad_size[0] = &((SRC)->EVALUATOR(SRC_PREFIX, scratchpad_0_size_i));              \
+        (DST)->task_o.scratchpad_addr[1] = &((SRC)->EVALUATOR(SRC_PREFIX, scratchpad_1_addr_i));              \
+        (DST)->task_o.scratchpad_size[1] = &((SRC)->EVALUATOR(SRC_PREFIX, scratchpad_1_size_i));              \
+        (DST)->task_o.scratchpad_addr[2] = &((SRC)->EVALUATOR(SRC_PREFIX, scratchpad_2_addr_i));              \
+        (DST)->task_o.scratchpad_size[2] = &((SRC)->EVALUATOR(SRC_PREFIX, scratchpad_2_size_i));              \
+        (DST)->task_o.scratchpad_addr[3] = &((SRC)->EVALUATOR(SRC_PREFIX, scratchpad_3_addr_i));              \
+        (DST)->task_o.scratchpad_size[3] = &((SRC)->EVALUATOR(SRC_PREFIX, scratchpad_3_size_i));              \
+        (DST)->task_o.trigger_feedback = &(SRC)->task_trigger_feedback_i;                                     \
+        (DST)->feedback_valid_i = &(SRC)->feedback_valid_o;                                                   \
+        (DST)->feedback_ready_o = &(SRC)->feedback_ready_i;                                                   \
+        (DST)->feedback_msgid_i = &(SRC)->feedback_msgid_o;                                                   \
+        (DST)->feedback_her_addr_i = &(SRC)->feedback_her_addr_o;                                             \
+        (DST)->feedback_her_size_i = &(SRC)->feedback_her_size_o;                                             \
+        (DST)->feedback_trigger_i = &(SRC)->feedback_trigger_o;                                               \
+        (DST)->pspin_active_i = &(SRC)->pspin_active_o;                                                       \
     }
 
 #define NO_CMD_PORT_ASSIGN(SRC, SRC_PREFIX, DST)                                        \
@@ -186,6 +218,36 @@ namespace PsPIN
         uint8_t         eos_i;
     } fmq_control_port_concrete_t;
 
+    typedef struct task_descr_p 
+    {
+        uint16_t    *msgid;
+        mem_addr_t  *pkt_addr;
+        mem_size_t  *pkt_size;
+        mem_addr_t  *l2_mem_addr;
+        mem_size_t  *l2_mem_size;
+        host_addr_t *host_mem_addr;
+        mem_size_t  *host_mem_size;
+        mem_addr_t  *handler_addr;
+        mem_size_t  *handler_size;
+        mem_addr_t  *scratchpad_addr[NUM_CLUSTERS];
+        mem_size_t  *scratchpad_size[NUM_CLUSTERS];
+        uint8_t     *trigger_feedback;
+    } task_descr_p;
+
+
+    typedef struct task_control_port
+    {
+        uint8_t      *task_ready_i;
+        uint8_t      *task_valid_o;
+        task_descr_p task_o;
+        uint8_t      *feedback_valid_i;
+        uint8_t      *feedback_ready_o;
+        uint16_t     *feedback_msgid_i;
+        uint32_t     *feedback_her_addr_i;
+        uint32_t     *feedback_her_size_i;
+        uint8_t      *feedback_trigger_i;
+        uint8_t      *pspin_active_i;
+    } task_control_port_t;
     typedef struct no_cmd_port
     {
         // Request

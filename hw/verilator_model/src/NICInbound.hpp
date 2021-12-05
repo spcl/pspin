@@ -115,7 +115,6 @@ namespace PsPIN
 
             // Accept feedbacks
             *ni_ctrl.feedback_ready_o = 1;
-
             packet_wait_cycles = 0;
 
             pkt_file = NULL;

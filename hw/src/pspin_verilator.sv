@@ -267,31 +267,26 @@ module pspin_verilator #(
 
     /** NIC inbound engine/packet generator control **/
     //from pktgen
-    output logic                            her_ready_o,
-    input  logic                            her_valid_i,
-    input  logic [C_MSGID_WIDTH-1:0]        her_msgid_i,
-    input  logic                            her_is_eom_i,
-    input  mem_addr_t                       her_addr_i,
-    input  mem_size_t                       her_size_i,
-    input  mem_size_t                       her_xfer_size_i,
-    input  mem_addr_t                       her_meta_handler_mem_addr_i,
-    input  mem_size_t                       her_meta_handler_mem_size_i,
-    input  host_addr_t                      her_meta_host_mem_addr_i,
-    input  mem_size_t                       her_meta_host_mem_size_i,
-    input  mem_addr_t                       her_meta_hh_addr_i,
-    input  mem_size_t                       her_meta_hh_size_i,
-    input  mem_addr_t                       her_meta_ph_addr_i,
-    input  mem_size_t                       her_meta_ph_size_i,
-    input  mem_addr_t                       her_meta_th_addr_i,
-    input  mem_size_t                       her_meta_th_size_i,
-    input  mem_addr_t                       her_meta_scratchpad_0_addr_i,
-    input  mem_size_t                       her_meta_scratchpad_0_size_i,
-    input  mem_addr_t                       her_meta_scratchpad_1_addr_i,
-    input  mem_size_t                       her_meta_scratchpad_1_size_i,
-    input  mem_addr_t                       her_meta_scratchpad_2_addr_i,
-    input  mem_size_t                       her_meta_scratchpad_2_size_i,
-    input  mem_addr_t                       her_meta_scratchpad_3_addr_i,
-    input  mem_size_t                       her_meta_scratchpad_3_size_i,
+    output logic                            task_ready_o,
+    input  logic                            task_valid_i,
+    input  logic [C_MSGID_WIDTH-1:0]        task_msgid_i,
+    input  mem_addr_t                       task_pkt_addr_i,
+    input  mem_size_t                       task_pkt_size_i,
+    input  mem_addr_t                       task_l2_mem_addr_i,
+    input  mem_size_t                       task_l2_mem_size_i,
+    input  host_addr_t                      task_host_mem_addr_i,
+    input  mem_size_t                       task_host_mem_size_i,
+    input  mem_addr_t                       task_handler_addr_i,
+    input  mem_size_t                       task_handler_size_i,
+    input  mem_addr_t                       task_scratchpad_0_addr_i,
+    input  mem_size_t                       task_scratchpad_0_size_i,
+    input  mem_addr_t                       task_scratchpad_1_addr_i,
+    input  mem_size_t                       task_scratchpad_1_size_i,
+    input  mem_addr_t                       task_scratchpad_2_addr_i,
+    input  mem_size_t                       task_scratchpad_2_size_i,
+    input  mem_addr_t                       task_scratchpad_3_addr_i,
+    input  mem_size_t                       task_scratchpad_3_size_i,
+    input  logic                            task_trigger_feedback_i,
 
     // to pktgen
     input  logic                            feedback_ready_i,
@@ -299,6 +294,7 @@ module pspin_verilator #(
     output mem_addr_t                       feedback_her_addr_o,
     output mem_size_t                       feedback_her_size_o,
     output logic [C_MSGID_WIDTH-1:0]        feedback_msgid_o,
+    output logic                            feedback_trigger_o,
 
     
     /** NIC outbound engine or NIC command unit **/
@@ -358,7 +354,7 @@ module pspin_verilator #(
     logic [pspin_cfg_pkg::NUM_CLUSTERS-1:0] cl_busy;
 
 
-    her_descr_t         her_descr;
+    handler_task_t      task_descr;
     feedback_descr_t    feedback;
     pspin_cmd_t         nic_cmd_req;
     pspin_cmd_resp_t    nic_cmd_resp;
@@ -381,9 +377,10 @@ module pspin_verilator #(
         .axi_host_mst         (axi_host_mst),
         .axi_host_slv         (axi_host_slv),
 
-        .her_ready_o          (her_ready_o),
-        .her_valid_i          (her_valid_i),
-        .her_i                (her_descr),
+        .task_ready_o         (task_ready_o),
+        .task_valid_i         (task_valid_i),
+        .task_i               (task_descr),
+
         .eos_i                (eos_i),
         .nic_feedback_ready_i (feedback_ready_i),
         .nic_feedback_valid_o (feedback_valid_o),
@@ -641,34 +638,30 @@ module pspin_verilator #(
     assign host_master_b_ready_o                    = axi_host_mst.b_ready;
 
     // Connecting her_descr
-    assign her_descr.msgid                          = her_msgid_i;
-    assign her_descr.eom                            = her_is_eom_i;
-    assign her_descr.her_addr                       = her_addr_i;
-    assign her_descr.her_size                       = her_size_i;
-    assign her_descr.xfer_size                      = her_xfer_size_i;
-    assign her_descr.mpq_meta.handler_mem_addr      = her_meta_handler_mem_addr_i;
-    assign her_descr.mpq_meta.handler_mem_size      = her_meta_handler_mem_size_i;
-    assign her_descr.mpq_meta.host_mem_addr         = her_meta_host_mem_addr_i;
-    assign her_descr.mpq_meta.host_mem_size         = her_meta_host_mem_size_i;
-    assign her_descr.mpq_meta.hh_addr               = her_meta_hh_addr_i;
-    assign her_descr.mpq_meta.hh_size               = her_meta_hh_size_i;
-    assign her_descr.mpq_meta.ph_addr               = her_meta_ph_addr_i;
-    assign her_descr.mpq_meta.ph_size               = her_meta_ph_size_i;
-    assign her_descr.mpq_meta.th_addr               = her_meta_th_addr_i;
-    assign her_descr.mpq_meta.th_size               = her_meta_th_size_i;
-    assign her_descr.mpq_meta.scratchpad_addr[0]    = her_meta_scratchpad_0_addr_i;
-    assign her_descr.mpq_meta.scratchpad_addr[1]    = her_meta_scratchpad_1_addr_i;
-    assign her_descr.mpq_meta.scratchpad_addr[2]    = her_meta_scratchpad_2_addr_i;
-    assign her_descr.mpq_meta.scratchpad_addr[3]    = her_meta_scratchpad_3_addr_i;
-    assign her_descr.mpq_meta.scratchpad_size[0]    = her_meta_scratchpad_0_size_i;
-    assign her_descr.mpq_meta.scratchpad_size[1]    = her_meta_scratchpad_1_size_i;
-    assign her_descr.mpq_meta.scratchpad_size[2]    = her_meta_scratchpad_2_size_i;
-    assign her_descr.mpq_meta.scratchpad_size[3]    = her_meta_scratchpad_3_size_i;
+    assign task_descr.msgid                         = task_msgid_i;
+    assign task_descr.pkt_addr                      = task_pkt_addr_i;
+    assign task_descr.pkt_size                      = task_pkt_size_i;
+    assign task_descr.handler_mem_addr              = task_l2_mem_addr_i;
+    assign task_descr.handler_mem_size              = task_l2_mem_size_i;
+    assign task_descr.host_mem_addr                 = task_host_mem_addr_i;
+    assign task_descr.host_mem_size                 = task_host_mem_size_i;
+    assign task_descr.handler_fun                   = task_handler_addr_i;
+    assign task_descr.handler_fun_size              = task_handler_size_i;
+    assign task_descr.scratchpad_addr[0]            = task_scratchpad_0_addr_i;
+    assign task_descr.scratchpad_addr[1]            = task_scratchpad_1_addr_i;
+    assign task_descr.scratchpad_addr[2]            = task_scratchpad_2_addr_i;
+    assign task_descr.scratchpad_addr[3]            = task_scratchpad_3_addr_i;
+    assign task_descr.scratchpad_size[0]            = task_scratchpad_0_size_i;
+    assign task_descr.scratchpad_size[1]            = task_scratchpad_1_size_i;
+    assign task_descr.scratchpad_size[2]            = task_scratchpad_2_size_i;
+    assign task_descr.scratchpad_size[3]            = task_scratchpad_3_size_i;
+    assign task_descr.trigger_feedback              = task_trigger_feedback_i;
     
     // Connecting feedback
     assign feedback_her_addr_o                      = feedback.pkt_addr;
     assign feedback_her_size_o                      = feedback.pkt_size;
     assign feedback_msgid_o                         = feedback.msgid;
+    assign feedback_trigger_o                       = feedback.trigger_feedback;
 
     // Connecting NIC command request
     assign nic_cmd_req_id_o                         = nic_cmd_req.cmd_id;

@@ -30,9 +30,9 @@ module pspin #(
   AXI_BUS.Slave                           axi_host_slv,  // Host slave port: to let the host write to L2 prog mem and L2 handler mem
 
   //from pktgen
-  output logic                            her_ready_o,
-  input  logic                            her_valid_i,
-  input  pspin_cfg_pkg::her_descr_t       her_i,
+  output logic                            task_ready_o,
+  input  logic                            task_valid_i,
+  input  pspin_cfg_pkg::handler_task_t    task_i,
   
   //termination signal    
   input  logic                            eos_i,
@@ -274,9 +274,9 @@ module pspin #(
   `AXI_ASSIGN_TO_RESP(periph_resp, periph_mst)
 
   // mpq_engine -> scheduler
-  logic                                       mpqengine_scheduler_valid;
-  logic                                       mpqengine_scheduler_ready;
-  pspin_cfg_pkg::handler_task_t                   mpqengine_scheduler_task;
+  // logic                                       mpqengine_scheduler_valid;
+  // logic                                       mpqengine_scheduler_ready;
+  // pspin_cfg_pkg::handler_task_t                   mpqengine_scheduler_task;
 
   // scheduler -> mpq_engine
   logic                                       scheduler_mpqengine_valid;
@@ -319,34 +319,34 @@ module pspin #(
   
   assign pspin_active_o = (~cluster_active_q == '0);
 
-  mpq_engine #(
-    .NUM_HER_SLOTS          (pspin_cfg_pkg::NUM_MPQ_CELLS),
-    .NUM_MPQ                (N_MPQ) 
-  ) i_mpq_engine (
-    .rst_ni                 (rst_ni),
-    .clk_i                  (clk_i),
+  // mpq_engine #(
+  //   .NUM_HER_SLOTS          (pspin_cfg_pkg::NUM_MPQ_CELLS),
+  //   .NUM_MPQ                (N_MPQ) 
+  // ) i_mpq_engine (
+  //   .rst_ni                 (rst_ni),
+  //   .clk_i                  (clk_i),
 
-    .her_ready_o            (her_ready_o),
-    .her_valid_i            (her_valid_i),
-    .her_i                  (her_i),
+  //   .her_ready_o            (her_ready_o),
+  //   .her_valid_i            (her_valid_i),
+  //   .her_i                  (her_i),
 
-    .eos_i                  (eos_i),
+  //   .eos_i                  (eos_i),
 
-    .mpq_full_o             (mpq_full_o),
+  //   .mpq_full_o             (mpq_full_o),
 
-    .nic_feedback_ready_i   (nic_feedback_ready_i),
-    .nic_feedback_valid_o   (nic_feedback_valid_o),
-    .nic_feedback_o         (nic_feedback_o),
+  //   .nic_feedback_ready_i   (nic_feedback_ready_i),
+  //   .nic_feedback_valid_o   (nic_feedback_valid_o),
+  //   .nic_feedback_o         (nic_feedback_o),
 
-    .feedback_ready_o       (scheduler_mpqengine_ready),
-    .feedback_valid_i       (scheduler_mpqengine_valid),
-    .feedback_i             (scheduler_mpqengine_feedback),
+  //   .feedback_ready_o       (scheduler_mpqengine_ready),
+  //   .feedback_valid_i       (scheduler_mpqengine_valid),
+  //   .feedback_i             (scheduler_mpqengine_feedback),
 
-    .task_ready_i           (mpqengine_scheduler_ready),
-    .task_valid_o           (mpqengine_scheduler_valid),
-    .task_o                 (mpqengine_scheduler_task)
+  //   .task_ready_i           (mpqengine_scheduler_ready),
+  //   .task_valid_o           (mpqengine_scheduler_valid),
+  //   .task_o                 (mpqengine_scheduler_task)
 
-  );
+  // );
 
   scheduler #(
     .NUM_CLUSTERS             (N_CLUSTERS),
@@ -356,14 +356,14 @@ module pspin #(
     .clk_i                    (clk_i),
 
     //from MPQ engine
-    .task_valid_i             (mpqengine_scheduler_valid),
-    .task_ready_o             (mpqengine_scheduler_ready),
-    .task_descr_i             (mpqengine_scheduler_task),
+    .task_valid_i             (task_valid_i),
+    .task_ready_o             (task_ready_o),
+    .task_descr_i             (task_i),
 
     // to MPQ engine (TODO: change names)
-    .pktgen_feedback_valid_o  (scheduler_mpqengine_valid),
-    .pktgen_feedback_ready_i  (scheduler_mpqengine_ready),
-    .pktgen_feedback_o        (scheduler_mpqengine_feedback),
+    .pktgen_feedback_valid_o  (nic_feedback_valid_o),
+    .pktgen_feedback_ready_i  (nic_feedback_ready_i),
+    .pktgen_feedback_o        (nic_feedback_o),
 
     // to cluster_schedulers
     .cluster_task_valid_o     (sched_loc_valid),
