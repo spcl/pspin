@@ -424,12 +424,12 @@ module pspin_verilator #(
         $readmemh({get_slm_path(), "prog_mem_stim.slm"}, i_pspin.i_prog_mem.i_sram.i_tc_sram.sram);
     end
     
-    // Wait for termination
-    always_ff @(posedge clk_i, negedge rst_ni) begin
-      if (i_pspin.i_mpq_engine.mpq_busy == '0 && i_pspin.i_mpq_engine.eos_i && i_pspin.i_mpq_engine.fifo_empty) begin
-        $finish;
-      end
-    end
+    // // Wait for termination
+    // always_ff @(posedge clk_i, negedge rst_ni) begin
+    //   if (i_pspin.i_mpq_engine.mpq_busy == '0 && i_pspin.i_mpq_engine.eos_i && i_pspin.i_mpq_engine.fifo_empty) begin
+    //     $finish;
+    //   end
+    // end
 
     /* enable instruction fetch signal */
     assign cl_fetch_en = (rst_ni) ? 4'b1111 : '0;

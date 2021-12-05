@@ -27,6 +27,7 @@
 #include "PCIeSlave.hpp"
 #include "PCIeMaster.hpp"
 #include "SimControl.hpp"
+#include "FMQEngine.hpp"
 
 #include "pspinsim.h"
 #include "spin.h"
@@ -68,12 +69,14 @@ AXIPort<uint32_t, uint64_t> no_mst;
 no_cmd_port_t no_cmd;
 AXIPort<uint64_t, uint64_t> pcie_slv_port;
 AXIPort<uint32_t, uint64_t> pcie_mst_port;
+fmq_control_port_concrete_t fmq_input_port;
 
 SimControl<Vpspin_verilator> *sim;
 NICInbound<AXIPort<uint32_t, uint64_t>> *ni;
 NICOutbound<AXIPort<uint32_t, uint64_t>> *no;
 PCIeSlave<AXIPort<uint64_t, uint64_t>> *pcie_slv;
 PCIeMaster<AXIPort<uint32_t, uint64_t>> *pcie_mst;
+FMQEngine *fmq_eng;
 
 char slm_path[PATH_MAX];
 
@@ -125,7 +128,7 @@ int pspinsim_init(int argc, char **argv, pspin_conf_t *conf)
 
     // Define ports
     AXI_MASTER_PORT_ASSIGN(tb, ni_slave, &ni_mst);
-    NI_CTRL_PORT_ASSIGN(tb, her, &ni_control)    
+    NI_CTRL_PORT_ASSIGN(&fmq_input_port, her, &ni_control)    
     AXI_MASTER_PORT_ASSIGN(tb, no_slave, &no_mst);
     NO_CMD_PORT_ASSIGN(tb, nic_cmd, &no_cmd);
     AXI_SLAVE_PORT_ASSIGN(tb, host_master, &pcie_slv_port);
@@ -136,12 +139,14 @@ int pspinsim_init(int argc, char **argv, pspin_conf_t *conf)
     no = new NICOutbound<AXIPort<uint32_t, uint64_t>>(no_mst, no_cmd, conf->no_conf.network_G, conf->no_conf.max_pkt_size, conf->no_conf.max_network_queue_len);
     pcie_slv = new PCIeSlave<AXIPort<uint64_t, uint64_t>>(pcie_slv_port, conf->pcie_slv_conf.axi_aw_buffer, conf->pcie_slv_conf.axi_w_buffer, conf->pcie_slv_conf.axi_ar_buffer, conf->pcie_slv_conf.axi_r_buffer, conf->pcie_slv_conf.axi_b_buffer, conf->pcie_slv_conf.pcie_L, conf->pcie_slv_conf.pcie_G);
     pcie_mst = new PCIeMaster<AXIPort<uint32_t, uint64_t>>(pcie_mst_port);
+    fmq_eng = new FMQEngine(fmq_input_port);
 
     // Add simulation only modules
     sim->add_module(*ni);
     sim->add_module(*no);
     sim->add_module(*pcie_slv);
     sim->add_module(*pcie_mst);
+    sim->add_module(*fmq_eng);
 
     //before the reset!    
     const char *slm_files_path = conf->slm_files_path;

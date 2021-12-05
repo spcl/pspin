@@ -150,6 +150,42 @@ namespace PsPIN
         uint8_t *eos_o;
     } ni_control_port_t;
 
+    typedef struct fmq_control_port_concrete
+    {
+        uint8_t         her_valid_i;
+        uint8_t         her_ready_o;
+        uint16_t        her_msgid_i;
+        uint8_t         her_is_eom_i;
+        mem_addr_t      her_addr_i;
+        mem_size_t      her_size_i;
+        mem_size_t      her_xfer_size_i;
+        mem_addr_t      her_meta_handler_mem_addr_i;
+        mem_size_t      her_meta_handler_mem_size_i;
+        host_addr_t     her_meta_host_mem_addr_i;
+        mem_size_t      her_meta_host_mem_size_i;
+        mem_addr_t      her_meta_hh_addr_i;
+        mem_size_t      her_meta_hh_size_i;
+        mem_addr_t      her_meta_ph_addr_i;
+        mem_size_t      her_meta_ph_size_i;
+        mem_addr_t      her_meta_th_addr_i;
+        mem_size_t      her_meta_th_size_i;
+        mem_addr_t      her_meta_scratchpad_0_addr_i;
+        mem_size_t      her_meta_scratchpad_0_size_i;
+        mem_addr_t      her_meta_scratchpad_1_addr_i;
+        mem_size_t      her_meta_scratchpad_1_size_i;
+        mem_addr_t      her_meta_scratchpad_2_addr_i;
+        mem_size_t      her_meta_scratchpad_2_size_i;
+        mem_addr_t      her_meta_scratchpad_3_addr_i;
+        mem_size_t      her_meta_scratchpad_3_size_i;
+        uint8_t         pspin_active_o;
+        uint8_t         feedback_valid_o;
+        uint8_t         feedback_ready_i;
+        uint16_t        feedback_msgid_o;
+        uint32_t        feedback_her_addr_o;
+        uint32_t        feedback_her_size_o;
+        uint8_t         eos_i;
+    } fmq_control_port_concrete_t;
+
     typedef struct no_cmd_port
     {
         // Request
