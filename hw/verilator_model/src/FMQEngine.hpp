@@ -114,8 +114,18 @@ namespace PsPIN
 
         class FMQ {
         public:
-            FMQ(): state(Idle), eom_seen(false), task_in_flight(0)
+            FMQ(): state(Idle), eom_seen(false), task_in_flight(0), fmq_idx(0)
             {}
+
+            void set_fmq_idx(uint32_t idx)
+            {
+                fmq_idx = idx;
+            }
+
+            uint32_t get_fmq_idx()
+            {
+                return fmq_idx;
+            }
 
             void fmq_init(HER& h)
             {
@@ -149,7 +159,7 @@ namespace PsPIN
                     else state = Idle;
                 }
                 else if (state == THReady) state = Idle;
-                printf("FMQ feedback; state: %u\n", state);
+                printf("FMQ feedback; idx: %u; state: %u\n", fmq_idx, state);
                 return state == Idle;
             }
 
@@ -197,7 +207,7 @@ namespace PsPIN
                 t.trigger_feedback = pop_her;
 
 
-                printf("FMQ state=%u; trigger_feedback=%u\n", state, pop_her);
+                printf("FMQ task idx: %u; state: %u; trigger_feedback: %u\n", fmq_idx, state, pop_her);
                 if (pop_her) hers.pop();
 
                 return t;
@@ -220,13 +230,27 @@ namespace PsPIN
             bool eom_seen;
             bool has_th;
             uint32_t task_in_flight;
+            uint32_t fmq_idx;
         };
 
-        class FMQRRArbiter {
+        class FMQArbiter {
+        public:
+            virtual bool is_one_ready() = 0;
+            virtual FMQ& get_next() = 0;
+
+            FMQArbiter(std::vector<FMQ> &fmqs)
+            : fmqs(fmqs)
+            {}
+
+        protected:
+            std::vector<FMQ> &fmqs;
+        };
+
+        class FMQRRArbiter : public FMQArbiter {
 
         public:
             FMQRRArbiter(std::vector<FMQ> &fmqs)
-            : fmqs(fmqs), next(0)
+            : FMQArbiter(fmqs), next(0)
             {}
 
             bool is_one_ready()
@@ -243,14 +267,43 @@ namespace PsPIN
                 for (int i=0; i<fmqs.size(); i++) {
                     FMQ& curr = fmqs[next];
                     next = (next + 1) % fmqs.size();
-                    if (curr.is_ready()) return curr;
+                    if (curr.is_ready()) {
+                        return curr;
+                    }
                 }
                 assert(0);
             }
 
         private:
-            std::vector<FMQ> &fmqs;
+            
             uint32_t next;
+        };
+
+        class FMQPrioArbiter : public FMQArbiter {
+        public:
+            FMQPrioArbiter(std::vector<FMQ> &fmqs) 
+            : FMQArbiter(fmqs)
+            {}
+
+            bool is_one_ready()
+            {
+                for (int i=0; i<fmqs.size(); i++)
+                {
+                    if (fmqs[i].is_ready()) return true;
+                }
+                return false;
+            } 
+
+            FMQ& get_next() 
+            {
+                for (int i=0; i<fmqs.size(); i++) {
+                    FMQ& curr = fmqs[i];
+                    if (curr.is_ready()) {
+                        return curr;
+                    }
+                }
+                assert(0);
+            }
         };
 
     public:
@@ -270,6 +323,7 @@ namespace PsPIN
             ni_not_ready = false;
 
             fmqs.resize(num_fmqs);
+            for (uint32_t i=0; i<num_fmqs; i++) { fmqs[i].set_fmq_idx(i); }
         }
 
         void posedge()
@@ -464,8 +518,8 @@ namespace PsPIN
 
         uint32_t feedbacks_to_send;
 
-        FMQRRArbiter fmq_arbiter;
-
+        //FMQRRArbiter fmq_arbiter;
+        FMQPrioArbiter fmq_arbiter;
         uint32_t num_fmqs;
         uint32_t active_fmqs;
     };

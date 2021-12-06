@@ -135,10 +135,10 @@ void generate_packets()
 
     uint8_t *pkt_buff = (uint8_t *)malloc(sizeof(uint8_t) * (sim_state.packet_size));
     assert(pkt_buff != NULL);
-
-    for (uint32_t msg_idx = 0; msg_idx < sim_state.num_messages; msg_idx++)
+    
+    for (uint32_t pkt_idx = 0; pkt_idx < sim_state.num_packets; pkt_idx++)
     {
-        for (uint32_t pkt_idx = 0; pkt_idx < sim_state.num_packets; pkt_idx++)
+        for (uint32_t msg_idx = 0; msg_idx < sim_state.num_messages; msg_idx++)
         {
             uint32_t pkt_size = sim_state.packet_size;
             uint32_t l1_pkt_size = pkt_size;
