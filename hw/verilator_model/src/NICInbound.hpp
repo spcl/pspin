@@ -90,6 +90,7 @@ namespace PsPIN
             uint64_t pspin_arrival_time;
             uint32_t size;
             uint64_t user_ptr;
+            uint32_t msgid;
         } pktentry_t;
 
         uint64_t total_bytes_sent;
@@ -437,6 +438,7 @@ namespace PsPIN
             pktentry.nic_arrival_time = her.nic_arrival_time;
             pktentry.size = her.her_size;
             pktentry.user_ptr = her.user_ptr;
+            pktentry.msgid = her.msgid;
 
             assert(pktmap.find(*ni_ctrl.her_o.her_addr) == pktmap.end());
             pktmap[*ni_ctrl.her_o.her_addr] = pktentry;
@@ -469,7 +471,7 @@ namespace PsPIN
                 pktentry_t pktentry = pktmap[*ni_ctrl.feedback_her_addr_i];
                 uint64_t latency = (uint64_t)(sim_time() - pktentry.nic_arrival_time);
 
-                SIM_PRINT("INFO FEEDBACK 0x%x %lu %u\n", *ni_ctrl.feedback_her_addr_i, latency, pktentry.size);
+                SIM_PRINT("INFO FEEDBACK 0x%x %lu %u %u\n", *ni_ctrl.feedback_her_addr_i, latency, pktentry.size, pktentry.msgid);
 
                 assert(*ni_ctrl.feedback_her_size_i == pktentry.size);
                 free_pkt_space(*ni_ctrl.feedback_her_addr_i, *ni_ctrl.feedback_her_size_i);
