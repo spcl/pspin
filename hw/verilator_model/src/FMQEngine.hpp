@@ -114,12 +114,26 @@ namespace PsPIN
 
         class FMQ {
         public:
-            FMQ(): state(Idle), eom_seen(false), task_in_flight(0), fmq_idx(0)
+            FMQ()
+            : state(Idle), 
+              eom_seen(false), 
+              task_in_flight(0), 
+              fmq_idx(0), 
+              her_ta_sum(0), 
+              feedback_ta_sum(0), 
+              last_her_time(0), 
+              last_feedback_time(0),
+              num_hers_seen(0),
+              num_feedback_seen(0),
+              bytes_seen(0),
+              fair_mode(false),
+              expected_time_next_pkt(0)
             {}
 
-            void set_fmq_idx(uint32_t idx)
+            void configure(uint32_t fmq_idx, bool fair)
             {
-                fmq_idx = idx;
+                this->fmq_idx = fmq_idx;
+                this->fair_mode = fair;
             }
 
             uint32_t get_fmq_idx()
@@ -135,22 +149,54 @@ namespace PsPIN
                 has_th = h.her_meta_th_addr != 0;
             }
 
-            bool push_her(HER& h) {
+            bool push_her(HER& h, uint64_t simtime) {
                 bool was_idle = false;
+
+                register_her(h, simtime);
                 if (state==Idle) 
                 {
                     was_idle=true; 
                     fmq_init(h);
-                }
+                } 
 
                 if (h.her_is_eom) eom_seen = 1;
-
                 hers.push(h);
-
+                print_state("NEW_HER");
+                expected_time_next_pkt = simtime + get_current_her_ta();
                 return was_idle;
             }
 
-            bool handle_feedback() {
+            void register_her(HER& h, uint64_t simtime)
+            {
+                if (state!=Idle) 
+                {
+                    her_ta_sum += (simtime - last_her_time);
+                }
+
+                num_hers_seen++;
+                bytes_seen += h.her_size;
+                last_her_time = simtime;
+            }
+
+            double get_current_her_ta() 
+            {
+                if (num_hers_seen==1) return 0;
+                return (double) her_ta_sum / (num_hers_seen-1); 
+            }
+
+            double get_current_pkt_size_avg()
+            {
+                return (double) bytes_seen / num_hers_seen;
+            }
+
+            uint32_t max_in_flight_tasks()
+            {
+                if (get_current_her_ta() == 0) return -1;
+                return (uint32_t) (get_current_pkt_size_avg() / ((get_current_her_ta()/1000) * 1.56));
+            }
+
+
+            bool handle_feedback(uint64_t simtime) {
                 assert(task_in_flight>0);
                 task_in_flight--;
                 if (state == HHDraining) state = PHReady;
@@ -159,13 +205,13 @@ namespace PsPIN
                     else state = Idle;
                 }
                 else if (state == THReady) state = Idle;
-                printf("FMQ feedback; idx: %u; state: %u\n", fmq_idx, state);
+                print_state("FEEDBACK");
                 return state == Idle;
             }
 
             Task produce_next_task() 
             {
-                assert(this->is_ready());
+                assert(this->is_ready(true));
                 task_in_flight++;
 
                 HER& h = hers.front();
@@ -207,18 +253,33 @@ namespace PsPIN
                 t.trigger_feedback = pop_her;
 
 
-                printf("FMQ task idx: %u; state: %u; trigger_feedback: %u\n", fmq_idx, state, pop_her);
+                //printf("FMQ task idx: %u; state: %u; trigger_feedback: %u\n", fmq_idx, state, pop_her);
+                print_state("TASK");
                 if (pop_her) hers.pop();
 
                 return t;
+            }
+
+            void print_state(std::string label)
+            {                
+                printf("FMQ %s; idx=%u; state=%u; her_ta=%lf; max_in_flight_tasks=%u; task_in_flight=%u; bytes_seen=%lu; num_hers=%u; queue_len=%u\n", label.c_str(), fmq_idx, state, get_current_her_ta(), max_in_flight_tasks(), task_in_flight, bytes_seen, num_hers_seen, hers.size());
             }
 
             bool is_idle() {
                 return state == Idle;
             }
 
-            bool is_ready() {
-                return !hers.empty() && (state == HHReady || state == PHReady || state == THReady);
+            bool is_warm(uint64_t simtime)
+            {
+                return simtime <= expected_time_next_pkt;
+            }
+
+            bool is_ready(bool ignore_fairness = false) 
+            {
+                bool ready = !hers.empty();
+                ready = ready && (state == HHReady || state == PHReady || state == THReady);
+                ready = ready && (ignore_fairness || !fair_mode || max_in_flight_tasks() >= task_in_flight);
+                return ready;
             }
 
         private:
@@ -231,11 +292,21 @@ namespace PsPIN
             bool has_th;
             uint32_t task_in_flight;
             uint32_t fmq_idx;
+
+            uint64_t last_her_time;
+            uint64_t last_feedback_time;
+            uint64_t her_ta_sum;
+            uint64_t feedback_ta_sum;
+            uint64_t num_hers_seen;
+            uint64_t num_feedback_seen;
+            uint64_t bytes_seen;
+            bool fair_mode;
+            uint64_t expected_time_next_pkt;
         };
 
         class FMQArbiter {
         public:
-            virtual bool is_one_ready() = 0;
+            virtual bool is_one_ready(uint64_t simtime) = 0;
             virtual FMQ& get_next() = 0;
 
             FMQArbiter(std::vector<FMQ> &fmqs)
@@ -253,7 +324,7 @@ namespace PsPIN
             : FMQArbiter(fmqs), next(0)
             {}
 
-            bool is_one_ready()
+            bool is_one_ready(uint64_t simtime)
             {
                 for (int i=0; i<fmqs.size(); i++)
                 {
@@ -285,30 +356,54 @@ namespace PsPIN
             : FMQArbiter(fmqs)
             {}
 
-            bool is_one_ready()
+            bool is_one_ready(uint64_t simtime)
             {
+                bool found_one = false;
+                bool one_warm = false;
                 for (int i=0; i<fmqs.size(); i++)
                 {
-                    if (fmqs[i].is_ready()) return true;
+                    if (fmqs[i].is_ready()) found_one = true;
+                    else one_warm = one_warm || fmqs[i].is_warm(simtime);
                 }
-                return false;
+                
+                //try again but ignore fairness
+                if (!found_one && !one_warm) 
+                {
+                    for (int i=0; i<fmqs.size(); i++)
+                    {
+                        if (fmqs[i].is_ready(true)) found_one = true;
+                    }
+                }
+                
+                return found_one;
             } 
 
             FMQ& get_next() 
             {
+                printf("F0: ready: %u (%u); F1: ready: %u (%u);\n", fmqs[0].is_ready(), fmqs[0].is_ready(true), fmqs[1].is_ready(), fmqs[1].is_ready(true));
+
                 for (int i=0; i<fmqs.size(); i++) {
                     FMQ& curr = fmqs[i];
                     if (curr.is_ready()) {
                         return curr;
                     }
                 }
+                
+                //try again but ignore fairness
+                for (int i=0; i<fmqs.size(); i++) {
+                    FMQ& curr = fmqs[i];
+                    if (curr.is_ready(true)) {
+                        return curr;
+                    }
+                }
+                
                 assert(0);
             }
         };
 
     public:
 
-        FMQEngine(fmq_control_port_concrete_t& ni_port, task_control_port_t& sched_port, uint32_t num_fmqs = 1024) 
+        FMQEngine(fmq_control_port_concrete_t& ni_port, task_control_port_t& sched_port, uint32_t num_fmqs = 1024, bool fair_mode=true) 
         : ni_port(ni_port), sched_port(sched_port), feedback_buffer(1), feedbacks_to_send(0), fmq_arbiter(fmqs), num_fmqs(num_fmqs), active_fmqs(0)
         {
             //clean NI port state
@@ -323,7 +418,7 @@ namespace PsPIN
             ni_not_ready = false;
 
             fmqs.resize(num_fmqs);
-            for (uint32_t i=0; i<num_fmqs; i++) { fmqs[i].set_fmq_idx(i); }
+            for (uint32_t i=0; i<num_fmqs; i++) { fmqs[i].configure(i, fair_mode); }
         }
 
         void posedge()
@@ -382,7 +477,7 @@ namespace PsPIN
                 new_her.her_meta_scratchpad_3_addr  = ni_port.her_meta_scratchpad_3_addr_i;
                 new_her.her_meta_scratchpad_3_size  = ni_port.her_meta_scratchpad_3_size_i;
 
-                bool was_idle = get_fmq(new_her.her_msgid).push_her(new_her);
+                bool was_idle = get_fmq(new_her.her_msgid).push_her(new_her, sim_time());
                 if (was_idle) active_fmqs++;
             }
         }
@@ -397,7 +492,7 @@ namespace PsPIN
                 SIM_PRINT("Received feedback from scheduler\n");
                 *sched_port.feedback_ready_o = 1;
 
-                bool become_idle = get_fmq(*sched_port.feedback_msgid_i).handle_feedback();
+                bool become_idle = get_fmq(*sched_port.feedback_msgid_i).handle_feedback(sim_time());
                 if (become_idle) active_fmqs--;
 
                 Feedback f;
@@ -443,11 +538,13 @@ namespace PsPIN
 
         void produce_output_posedge()
         {
-            if (sched_not_ready) return;
-
+            if (sched_not_ready) {
+                printf("SCHEDULER STALLING!\n");   
+                return;
+            }
             *sched_port.task_valid_o = 0;
 
-            if (!fmq_arbiter.is_one_ready()) return;
+            if (!fmq_arbiter.is_one_ready(sim_time())) return;
 
             FMQ& fmq_to_sched = fmq_arbiter.get_next();
 
