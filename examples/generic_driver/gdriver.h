@@ -28,3 +28,4 @@ int gdriver_fini();
 int gdriver_set_packet_fill_callback(fill_packet_fun_t pkt_fill_fun);
 int gdriver_set_l2_img(void *img, size_t size);
 int gdriver_run();
+void gdriver_enqueue_pkt(uint32_t msg_idx, void* pkt_buff, uint32_t pkt_size, uint32_t l1_pkt_size, uint8_t is_last, uint32_t delay);

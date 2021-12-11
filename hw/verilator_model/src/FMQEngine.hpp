@@ -126,14 +126,15 @@ namespace PsPIN
               num_hers_seen(0),
               num_feedback_seen(0),
               bytes_seen(0),
-              fair_mode(false),
-              expected_time_next_pkt(0)
+              expected_time_next_pkt(0),
+              last_fair_share(0)
             {}
 
-            void configure(uint32_t fmq_idx, bool fair)
+            void configure(uint32_t fmq_idx, uint32_t prio)
             {
+                assert(prio>0);
                 this->fmq_idx = fmq_idx;
-                this->fair_mode = fair;
+                this->prio = prio;
             }
 
             uint32_t get_fmq_idx()
@@ -161,7 +162,7 @@ namespace PsPIN
 
                 if (h.her_is_eom) eom_seen = 1;
                 hers.push(h);
-                print_state("NEW_HER");
+                print_state(simtime, "NEW_HER");
                 expected_time_next_pkt = simtime + get_current_her_ta();
                 return was_idle;
             }
@@ -189,13 +190,6 @@ namespace PsPIN
                 return (double) bytes_seen / num_hers_seen;
             }
 
-            uint32_t max_in_flight_tasks()
-            {
-                if (get_current_her_ta() == 0) return -1;
-                return (uint32_t) (get_current_pkt_size_avg() / ((get_current_her_ta()/1000) * 1.56));
-            }
-
-
             bool handle_feedback(uint64_t simtime) {
                 assert(task_in_flight>0);
                 task_in_flight--;
@@ -205,13 +199,13 @@ namespace PsPIN
                     else state = Idle;
                 }
                 else if (state == THReady) state = Idle;
-                print_state("FEEDBACK");
+                print_state(simtime, "FEEDBACK");
                 return state == Idle;
             }
 
-            Task produce_next_task() 
+            Task produce_next_task(uint64_t simtime) 
             {
-                assert(this->is_ready(true));
+                assert(this->is_ready());
                 task_in_flight++;
 
                 HER& h = hers.front();
@@ -254,15 +248,15 @@ namespace PsPIN
 
 
                 //printf("FMQ task idx: %u; state: %u; trigger_feedback: %u\n", fmq_idx, state, pop_her);
-                print_state("TASK");
+                print_state(simtime, "TASK");
                 if (pop_her) hers.pop();
 
                 return t;
             }
 
-            void print_state(std::string label)
+            void print_state(uint64_t simtime, std::string label)
             {                
-                printf("FMQ %s; idx=%u; state=%u; her_ta=%lf; max_in_flight_tasks=%u; task_in_flight=%u; bytes_seen=%lu; num_hers=%u; queue_len=%u\n", label.c_str(), fmq_idx, state, get_current_her_ta(), max_in_flight_tasks(), task_in_flight, bytes_seen, num_hers_seen, hers.size());
+                printf("%lu %s idx=%u; prio=%u; state=%u; her_ta=%lf; task_in_flight=%u; bytes_seen=%lu; num_hers=%u; queue_len=%u; last_fair_share=%lf\n", simtime, label.c_str(), fmq_idx, prio, state, get_current_her_ta(), task_in_flight, bytes_seen, num_hers_seen, hers.size(), last_fair_share);
             }
 
             bool is_idle() {
@@ -274,12 +268,22 @@ namespace PsPIN
                 return simtime <= expected_time_next_pkt;
             }
 
-            bool is_ready(bool ignore_fairness = false) 
+            bool is_ready() 
             {
                 bool ready = !hers.empty();
                 ready = ready && (state == HHReady || state == PHReady || state == THReady);
-                ready = ready && (ignore_fairness || !fair_mode || max_in_flight_tasks() >= task_in_flight);
                 return ready;
+            }
+
+            bool is_schedulable(double fair_share)
+            {
+                last_fair_share = fair_share;
+                return is_ready() && (fair_share < 0 || task_in_flight <= fair_share);
+            }
+
+            uint32_t get_prio()
+            {
+                return prio;
             }
 
         private:
@@ -300,14 +304,15 @@ namespace PsPIN
             uint64_t num_hers_seen;
             uint64_t num_feedback_seen;
             uint64_t bytes_seen;
-            bool fair_mode;
+            uint32_t prio;
             uint64_t expected_time_next_pkt;
+            double last_fair_share;
         };
 
         class FMQArbiter {
         public:
             virtual bool is_one_ready(uint64_t simtime) = 0;
-            virtual FMQ& get_next() = 0;
+            virtual FMQ& get_next(uint64_t simtime) = 0;
 
             FMQArbiter(std::vector<FMQ> &fmqs)
             : fmqs(fmqs)
@@ -328,12 +333,12 @@ namespace PsPIN
             {
                 for (int i=0; i<fmqs.size(); i++)
                 {
-                    if (fmqs[i].is_ready()) return true;
+                    if (fmqs[i].is_schedulable(-1)) return true;
                 }
                 return false;
             }
 
-            FMQ& get_next() 
+            FMQ& get_next(uint64_t simtime) 
             {
                 for (int i=0; i<fmqs.size(); i++) {
                     FMQ& curr = fmqs[next];
@@ -356,48 +361,72 @@ namespace PsPIN
             : FMQArbiter(fmqs)
             {}
 
+            uint32_t get_prio_sum(uint64_t simtime)
+            {
+                uint32_t sum_active_prio = 0;
+                for (int i=0; i<fmqs.size(); i++) 
+                { 
+                    if (fmqs[i].is_ready() || fmqs[i].is_warm(simtime)) sum_active_prio += fmqs[i].get_prio();     
+                }
+
+                return sum_active_prio;
+            }
+
             bool is_one_ready(uint64_t simtime)
             {
-                bool found_one = false;
-                bool one_warm = false;
-                for (int i=0; i<fmqs.size(); i++)
-                {
-                    if (fmqs[i].is_ready()) found_one = true;
-                    else one_warm = one_warm || fmqs[i].is_warm(simtime);
-                }
-                
-                //try again but ignore fairness
-                if (!found_one && !one_warm) 
-                {
-                    for (int i=0; i<fmqs.size(); i++)
-                    {
-                        if (fmqs[i].is_ready(true)) found_one = true;
-                    }
-                }
-                
-                return found_one;
-            } 
 
-            FMQ& get_next() 
+                uint32_t num_pe = NUM_CORES * NUM_CLUSTERS;
+                
+                uint32_t sum_active_prio = get_prio_sum(simtime);
+                //printf("sum_prio: %u\n", sum_active_prio);
+                if (sum_active_prio == 0) return false;
+
+                for (int i=0; i<fmqs.size(); i++) 
+                {
+                    FMQ& curr = fmqs[i];
+                    double fair_share = num_pe * ((double) curr.get_prio() / sum_active_prio);
+                    if (!curr.is_ready()) fair_share = 0;
+
+                    /* debug */
+                    /*if (fmqs[i].is_ready()) {
+                        printf("ARBITER: FMQ %u; fair share: %lf;\n", fmqs[i].get_fmq_idx(), fair_share);
+                    }*/
+                    /* end debug */
+
+                    if (curr.is_schedulable(fair_share)) return true;
+                }
+
+                return false;
+            }
+
+            FMQ& get_next(uint64_t simtime) 
             {
-                printf("F0: ready: %u (%u); F1: ready: %u (%u);\n", fmqs[0].is_ready(), fmqs[0].is_ready(true), fmqs[1].is_ready(), fmqs[1].is_ready(true));
+                uint32_t num_pe = NUM_CORES * NUM_CLUSTERS;
+                uint32_t sum_active_prio = get_prio_sum(simtime);
 
-                for (int i=0; i<fmqs.size(); i++) {
+
+                // for (int i=0; i<fmqs.size(); i++) 
+                // {   
+                //     FMQ& curr = fmqs[i];
+                //     double fair_share = num_pe * ((double) curr.get_prio() / sum_active_prio);
+                //     if (curr.is_schedulable(fair_share)) return curr;
+                // }
+
+                uint32_t max_prio = 0;
+                uint32_t max_prio_idx = 0;
+                for (int i=0; i<fmqs.size(); i++) 
+                {   
                     FMQ& curr = fmqs[i];
-                    if (curr.is_ready()) {
-                        return curr;
+                    double fair_share = num_pe * ((double) curr.get_prio() / sum_active_prio);
+                    if (curr.is_schedulable(fair_share) && curr.get_prio() > max_prio) {
+                        max_prio = curr.get_prio();
+                        max_prio_idx = i;    
                     }
                 }
-                
-                //try again but ignore fairness
-                for (int i=0; i<fmqs.size(); i++) {
-                    FMQ& curr = fmqs[i];
-                    if (curr.is_ready(true)) {
-                        return curr;
-                    }
-                }
-                
-                assert(0);
+
+                assert(max_prio>0);
+
+                return fmqs[max_prio_idx];
             }
         };
 
@@ -418,7 +447,12 @@ namespace PsPIN
             ni_not_ready = false;
 
             fmqs.resize(num_fmqs);
-            for (uint32_t i=0; i<num_fmqs; i++) { fmqs[i].configure(i, fair_mode); }
+            for (uint32_t i=0; i<num_fmqs; i++) { fmqs[i].configure(i, i+1); }
+            fmqs[0].configure(0, 1024);
+            fmqs[1].configure(1, 1024);
+            fmqs[2].configure(2, 512);
+            fmqs[3].configure(3, 1);
+            fmqs[4].configure(4, 1024);
         }
 
         void posedge()
@@ -539,16 +573,16 @@ namespace PsPIN
         void produce_output_posedge()
         {
             if (sched_not_ready) {
-                printf("SCHEDULER STALLING!\n");   
+                //printf("SCHEDULER STALLING!\n");   
                 return;
             }
             *sched_port.task_valid_o = 0;
 
             if (!fmq_arbiter.is_one_ready(sim_time())) return;
 
-            FMQ& fmq_to_sched = fmq_arbiter.get_next();
+            FMQ& fmq_to_sched = fmq_arbiter.get_next(sim_time());
 
-            Task task = fmq_to_sched.produce_next_task();
+            Task task = fmq_to_sched.produce_next_task(sim_time());
             
             //they should just be of the same type :(
             *sched_port.task_o.handler_addr = task.handler_addr;

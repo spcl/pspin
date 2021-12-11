@@ -36,6 +36,8 @@
 #define SCRATCHPAD_REL_ADDR 0
 #define SCRATCHPAD_SIZE (800 * 1024)
 
+#define NUM_FMQS 1024
+
 #define CHECK_ERR(S)                   \
     {                                  \
         int res;                       \
@@ -129,36 +131,37 @@ int make_ec()
 }
 
 
+void gdriver_enqueue_pkt(uint32_t msg_idx, void* pkt_buff, uint32_t pkt_size, uint32_t l1_pkt_size, uint8_t is_last, uint32_t delay)
+{
+    pspinsim_packet_add(&(sim_state.ec), msg_idx, pkt_buff, pkt_size, l1_pkt_size, is_last, delay, 0);
+}
+
 void generate_packets()
 {
     spin_ec_t ec;
 
+    if (sim_state.pkt_fill_fun == NULL) { return; }
+
     uint8_t *pkt_buff = (uint8_t *)malloc(sizeof(uint8_t) * (sim_state.packet_size));
     assert(pkt_buff != NULL);
     
+    uint32_t msg_idx_interval = NUM_FMQS / (sim_state.num_messages);
+
     for (uint32_t pkt_idx = 0; pkt_idx < sim_state.num_packets; pkt_idx++)
     {
         for (uint32_t msg_idx = 0; msg_idx < sim_state.num_messages; msg_idx++)
         {
+
+            uint32_t shifted_msg_idx = msg_idx * msg_idx_interval + (msg_idx % 2);
+
             uint32_t pkt_size = sim_state.packet_size;
             uint32_t l1_pkt_size = pkt_size;
 
-            if (sim_state.pkt_fill_fun != NULL)
-            {
-                pkt_size = sim_state.pkt_fill_fun(msg_idx, pkt_idx, pkt_buff, sim_state.packet_size, &l1_pkt_size);
-            }
-            else
-            {
-                // generate IP+UDP headers
-                pkt_hdr_t *hdr = (pkt_hdr_t*) pkt_buff;
-                hdr->ip_hdr.ihl = 5;
-                hdr->ip_hdr.length = pkt_size;
-                // TODO: set other fields
-            }
-
+            pkt_size = sim_state.pkt_fill_fun(shifted_msg_idx, pkt_idx, pkt_buff, sim_state.packet_size, &l1_pkt_size);
+            
             bool is_last = (pkt_idx + 1 == sim_state.num_packets);
             uint32_t delay = (is_last) ? sim_state.message_delay : sim_state.packet_delay;
-            pspinsim_packet_add(&(sim_state.ec), msg_idx, pkt_buff, pkt_size, l1_pkt_size, is_last, delay, 0);
+            pspinsim_packet_add(&(sim_state.ec), shifted_msg_idx, pkt_buff, pkt_size, l1_pkt_size, is_last, delay, 0);
             sim_state.packets_sent++;
         }
     }
