@@ -14,16 +14,13 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include "gdriver.h"
 #include "packets.h"
 
 #include "../handlers/slp_l1.h"
 
 #define F(data) ((data)[0] - 2 * (data)[1] > 1)
-
-// 4 epochs
-#define FIT_PKTS 32
-#define BATCH 8
 
 const DTYPE fit_data[8][2] = {
   8, 1,
@@ -73,21 +70,42 @@ void hexdump(const void* data, size_t size) {
   }
 }
 
+bool diag_printed = false;
+
+// 3 messages: fit, end-of-fit, predict
 uint32_t fill_packet(uint32_t msg_idx, uint32_t pkt_idx, uint8_t *pkt_buff, uint32_t max_pkt_size, uint32_t* l1_pkt_size)
 {
+    int payload_max_size = max_pkt_size - sizeof(pkt_hdr_t) - sizeof(slp_frame_hdr_t);
+    int batch = -1;
+    int fit_batch = payload_max_size / ((VECTOR_LEN + 1) * sizeof(DTYPE));
+    int predict_batch = payload_max_size / (VECTOR_LEN * sizeof(DTYPE));
     uint8_t ty;
     uint32_t payload_len = sizeof(slp_frame_hdr_t);
-    if (pkt_idx < FIT_PKTS) {
-      ty = TY_FIT_DATA;
-      payload_len += (VECTOR_LEN + 1) * BATCH * sizeof(DTYPE);
-    } else if (pkt_idx == FIT_PKTS) {
-      ty = TY_END_FITTING;
-      payload_len += sizeof(uint32_t);
-    } else {
-      ty = TY_PREDICT;
-      payload_len += VECTOR_LEN * BATCH * sizeof(DTYPE);
+    switch (msg_idx) {
+      case 0:
+        ty = TY_FIT_DATA;
+        batch = fit_batch;
+        payload_len += (VECTOR_LEN + 1) * batch * sizeof(DTYPE);
+        break;
+      case 1:
+        ty = TY_END_FITTING;
+        payload_len += sizeof(uint32_t);
+        break;
+      case 2:
+        ty = TY_PREDICT;
+        batch = predict_batch;
+        payload_len += VECTOR_LEN * batch * sizeof(DTYPE);
+        break;
+      default:
+        printf("ERR: unexpected msg_idx %d\n", msg_idx);
+        abort();
     }
-    printf("filling packet msg_idx=%d pkt_idx=%d ty=%#x\n", msg_idx, pkt_idx, ty);
+    //printf("filling packet msg_idx=%d pkt_idx=%d ty=%#x\n", msg_idx, pkt_idx, ty);
+    if (!diag_printed) {
+      printf("Packet payload max size %d\n", payload_max_size);
+      printf("Fit batch size: %d; predict batch size: %d\n", fit_batch, predict_batch);
+      diag_printed = true;
+    }
 
     pkt_hdr_t *hdr = (pkt_hdr_t*) pkt_buff;
     hdr->ip_hdr.ihl = 5;
@@ -105,7 +123,7 @@ uint32_t fill_packet(uint32_t msg_idx, uint32_t pkt_idx, uint8_t *pkt_buff, uint
 
     slp_frame_hdr_t *pld_hdr = (slp_frame_hdr_t*)((uint8_t*)pkt_buff + sizeof(pkt_hdr_t));
     pld_hdr->type = ty;
-    pld_hdr->count = BATCH;
+    pld_hdr->count = batch;
     pld_hdr->serial_no = pkt_idx;
 
     DTYPE *pld_body = (DTYPE *)((uint8_t*)pld_hdr + sizeof(slp_frame_hdr_t));
@@ -117,16 +135,18 @@ uint32_t fill_packet(uint32_t msg_idx, uint32_t pkt_idx, uint8_t *pkt_buff, uint
       goto finish;
     }
 
-    for (int i = 0; i < BATCH; ++i) {
+    for (int i = 0; i < batch; ++i) {
+      int sample_idx = i % 8;
       for (int k = 0; k < VECTOR_LEN; ++k) {
-        pld_body[i * VECTOR_LEN + k] = ty == TY_FIT_DATA ? fit_data[i][k] : rand();
+        pld_body[i * VECTOR_LEN + k] = ty == TY_FIT_DATA ? fit_data[sample_idx][k] : rand();
       }
       if (ty == TY_FIT_DATA) {
         DTYPE res = F(pld_body + i * VECTOR_LEN);
-        if (res != fit_result[i]) {
+        if (res != fit_result[sample_idx]) {
           printf("ERR: result mismatch for sample %d\n", i);
+          abort();
         }
-        pld_body[BATCH * VECTOR_LEN + i] = res;
+        pld_body[batch * VECTOR_LEN + i] = res;
       }
     }
 
