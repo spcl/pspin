@@ -2,4 +2,5 @@
 */sim_*
 */transcript
 */*.trace.txt
+*/*.trace.json
 core
