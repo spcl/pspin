@@ -160,7 +160,7 @@ finish:
 int main(int argc, char**argv)
 {
     const char *handlers_file="build/slp_l1";
-    const char *hh=NULL;
+    const char *hh="slp_l1_hh";
     const char *ph="slp_l1_ph";
     const char *th="slp_l1_th";
 
