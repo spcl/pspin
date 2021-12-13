@@ -32,11 +32,17 @@
 #define LEARNING_RATE 1
 #define INLINE inline
 
-//#define SLP_LOG(format, ...) printf("[slp] " format "\n", ##__VA_ARGS__);
-#define SLP_LOG(format, ...)
+#define SCRATCHPAD(x) ((uint8_t*)(task->scratchpad[(x)]))
+#define SELF_SCRATCHPAD SCRATCHPAD(args->cluster_id)
+#define MASTER_SCRATCHPAD SCRATCHPAD(0)
+
+#define WEIGHT_SIZE (sizeof(DTYPE) * (VECTOR_LEN + 1))
+#define SELF_WEIGHT ((DTYPE*)(SELF_SCRATCHPAD))
+#define MASTER_WEIGHT ((DTYPE*)(MASTER_SCRATCHPAD))
+#define HPU_WEIGHT(x) ((DTYPE*)(SCRATCHPAD((x))))
+#define RWLOCK ((spin_rw_lock_t *)(MASTER_SCRATCHPAD + WEIGHT_SIZE))
 
 static INLINE DTYPE predict(const DTYPE input[VECTOR_LEN], const DTYPE weight[VECTOR_LEN + 1], spin_rw_lock_t *fit_lock) {
-  //SLP_LOG("predict input=%#x weight=%#x", input, weight);
   DTYPE dot = 0;
   if (fit_lock)
     spin_rw_lock_r_lock(fit_lock);
@@ -51,7 +57,6 @@ static INLINE DTYPE predict(const DTYPE input[VECTOR_LEN], const DTYPE weight[VE
 
 // non-atomical in-place modification of weight
 DTYPE fit_batch(const DTYPE *input, const DTYPE *res, int len, DTYPE weight[VECTOR_LEN + 1], spin_rw_lock_t *fit_lock) {
-  SLP_LOG("fit_batch input=%#x res=%#x len=%d weight=%#x", input, res, len, weight);
   for (int i = 0; i < len; ++i) {
     DTYPE e = res[i] - predict(input + i * VECTOR_LEN, weight, fit_lock);
     spin_rw_lock_w_lock(fit_lock);
@@ -60,14 +65,12 @@ DTYPE fit_batch(const DTYPE *input, const DTYPE *res, int len, DTYPE weight[VECT
     }
     weight[VECTOR_LEN] += LEARNING_RATE * e;
     spin_rw_lock_w_unlock(fit_lock);
-    //printf("left critical region\n");
   }
 }
 
 // pkt_mem includes IP and UDP headers
 // payload_size does not include IP and UDP headers
 void send_return(uint8_t *pkt_mem, uint8_t payload_size, spin_cmd_t *put) {
-  SLP_LOG("send_return pkt_mem=%#x payload_size=%d", pkt_mem, payload_size);
   ip_hdr_t *ip_hdr = (ip_hdr_t*)pkt_mem;
   udp_hdr_t *udp_hdr = (udp_hdr_t*)((uint8_t*)pkt_mem + ip_hdr->ihl * 4);
 
@@ -88,27 +91,28 @@ void send_return(uint8_t *pkt_mem, uint8_t payload_size, spin_cmd_t *put) {
 }
 
 // memory layout:
-// cluster 0: weight [fit, predict] | rwlock [fit] | predict_flag [predict]
+// cluster 0: weight [fit, predict] | rwlock [fit]
 // cluster 1-3: weight [predict]
 __handler__ void slp_l1_hh(handler_args_t *args)
 {
   task_t *task = args->task;
 
-  if (args->cluster_id) {
-    //printf("FATAL: hh cluster not 0 but %d\n", args->cluster_id);
-    while (true) {}
+  uint8_t *pkt_pld_ptr;
+  uint32_t pkt_pld_len;
+  GET_IP_UDP_PLD(task->pkt_mem, pkt_pld_ptr, pkt_pld_len);
+  slp_frame_hdr_t *hdr_ptr = (slp_frame_hdr_t *)pkt_pld_ptr;
+  //printf("hh type %#x count %d\n", hdr_ptr->type, hdr_ptr->count);
+
+  if (hdr_ptr->type == TY_FIT_DATA) {
+    RWLOCK->num_readers = 32;
+    spin_lock_init(&RWLOCK->glock);
+    if (args->cluster_id) {
+      printf("FATAL: hh fit cluster not 0 but %d\n", args->cluster_id);
+      while (true) {}
+    }
   }
 
-  //printf("START: initialize rw lock\n");
-  uint8_t *local_mem = (uint8_t*)(task->scratchpad[args->cluster_id]);
-
-  spin_rw_lock_t *fit_lock = (spin_rw_lock_t*)(local_mem + sizeof(DTYPE) * (VECTOR_LEN + 1));
-
-  fit_lock->num_readers = 32;
-  spin_lock_init(&fit_lock->glock);
-
-  volatile uint32_t *predict_flag = (uint32_t *)(local_mem + sizeof(DTYPE) * (VECTOR_LEN + 1) + sizeof(spin_rw_lock_t));
-  *predict_flag = 0;
+  printf("hh weight: %d %d %d\n", MASTER_WEIGHT[0], MASTER_WEIGHT[1], MASTER_WEIGHT[2]);
 }
 
 __handler__ void slp_l1_ph(handler_args_t *args)
@@ -118,66 +122,28 @@ __handler__ void slp_l1_ph(handler_args_t *args)
     uint8_t *pkt_pld_ptr;
     uint32_t pkt_pld_len;
     GET_IP_UDP_PLD(task->pkt_mem, pkt_pld_ptr, pkt_pld_len);
-
     slp_frame_hdr_t *hdr_ptr = (slp_frame_hdr_t *)pkt_pld_ptr;
-    uint8_t *local_mem = (uint8_t*) (task->scratchpad[args->cluster_id]);
-    uint8_t *master_mem = (uint8_t*)(task->scratchpad[0]);
-    //printf("type %#x count %d serial_no %d\n", hdr_ptr->type, hdr_ptr->count, hdr_ptr->serial_no);
-
-    volatile uint32_t *processed_fits = (uint32_t*)(local_mem + (VECTOR_LEN + 1) * sizeof(DTYPE));
-    DTYPE *fit_weight = (DTYPE *)(master_mem);
-    spin_rw_lock_t *fit_lock = (spin_rw_lock_t *)(master_mem + sizeof(DTYPE) * (VECTOR_LEN + 1) + sizeof(uint32_t));
-
-    volatile uint32_t *predict_flag = (uint32_t*)(master_mem + sizeof(DTYPE) * (VECTOR_LEN + 1) + sizeof(uint32_t) + sizeof(spin_rw_lock_t));
-    DTYPE *predict_weight = (DTYPE *)(local_mem);
+    //printf("ph type %#x count %d\n", hdr_ptr->type, hdr_ptr->count);
 
     DTYPE *input_ptr = (DTYPE *)(pkt_pld_ptr + sizeof(slp_frame_hdr_t));
     DTYPE *res_ptr = input_ptr + VECTOR_LEN * hdr_ptr->count; // only for TY_FIT_DATA
 
     switch (hdr_ptr->type) {
       case TY_FIT_DATA:
-        fit_batch(input_ptr, res_ptr, hdr_ptr->count, fit_weight, fit_lock);
-        // increase after finishing processing
-        amo_add(processed_fits, 1);
+        fit_batch(input_ptr, res_ptr, hdr_ptr->count, MASTER_WEIGHT, RWLOCK);
         break;
       case TY_PREDICT:
-        while (!*predict_flag) {}
         for (uint32_t i = 0; i < hdr_ptr->count; ++i) {
-          DTYPE res = predict(input_ptr + i * VECTOR_LEN, predict_weight, NULL);
+          DTYPE res = predict(input_ptr + i * VECTOR_LEN, SELF_WEIGHT, NULL);
           *(input_ptr + i) = res;
         }
         spin_cmd_t put; // not checking status for this
         uint32_t pld_size = sizeof(slp_frame_hdr_t) + sizeof(DTYPE) * hdr_ptr->count;
         send_return(task->pkt_mem, pld_size, &put);
         break;
-      case TY_END_FITTING: {
-        // get serial no for last fit
-        uint32_t last_seq = *(uint32_t *)(input_ptr);
-        while (true) {
-          uint32_t all_processed = 0;
-          for (int i = 0; i < NB_CLUSTERS; ++i) {
-            uint32_t slave_processed = *(volatile uint32_t*)((uint8_t*)task->scratchpad[i] + sizeof(DTYPE) * (VECTOR_LEN + 1));
-            all_processed += slave_processed;
-          }
-          if (all_processed == last_seq + 1) // we have everyone finished
-            break;
-        }
-        spin_rw_lock_r_lock(fit_lock);
-        for (int i = 1; i < NB_CLUSTERS; ++i) {
-          uint8_t *slave_mem = (uint8_t*)(task->scratchpad[i]);
-          DTYPE *slave_weight = (DTYPE*)(slave_mem);
-          for (int k = 0; k < VECTOR_LEN + 1; ++k) {
-            slave_weight[k] = fit_weight[k];
-          }
-        }
-        // deliberately not unlocking: no fitting packet should come in after this point
-        //spin_rw_lock_r_unlock(fit_lock);
-        amo_store(predict_flag, 1);
-        break;
-                           }
       default:
         // something is wrong: unrecognized type
-        SLP_LOG("unrecognized type %#x", hdr_ptr->type);
+        printf("unrecognized type %#x\n", hdr_ptr->type);
         break;
     }
 }
@@ -185,21 +151,30 @@ __handler__ void slp_l1_ph(handler_args_t *args)
 __handler__ void slp_l1_th(handler_args_t *args)
 {
     task_t* task = args->task;
-    uint64_t host_address = task->host_mem_high;
-    host_address = (host_address << 32) | (task->host_mem_low);
 
-    uint32_t all_processed = 0;
-    for (int i = 0; i < NB_CLUSTERS; ++i) {
-      uint32_t slave_processed = *(volatile uint32_t *)((uint8_t *)task->scratchpad[i] + sizeof(DTYPE) * (VECTOR_LEN + 1));
-      all_processed += slave_processed;
+    uint8_t *pkt_pld_ptr;
+    uint32_t pkt_pld_len;
+    GET_IP_UDP_PLD(task->pkt_mem, pkt_pld_ptr, pkt_pld_len);
+    slp_frame_hdr_t *hdr_ptr = (slp_frame_hdr_t *)pkt_pld_ptr;
+
+    //printf("th type %#x count %d\n", hdr_ptr->type, hdr_ptr->count);
+
+    if (hdr_ptr->type != TY_FIT_DATA) {
+      return;
     }
-    uint8_t *master_mem = (uint8_t*) (task->scratchpad[0]);
-    DTYPE *hpu_weight = (DTYPE*)(master_mem);
-    printf("total training samples: %d\n", all_processed);
-    printf("weight: %d %d %d\n", hpu_weight[0], hpu_weight[1], hpu_weight[2]);
 
-    //signal that we completed so to let the host read the weight back
-    spin_host_write(host_address, (uint64_t) 1, false);
+    if (args->cluster_id) {
+      printf("FATAL: th cluster not 0 but %d\n", args->cluster_id);
+      while (true) {}
+    }
+
+    for (int i = 1; i < NB_CLUSTERS; ++i) {
+      for (int k = 0; k < VECTOR_LEN + 1; ++k) {
+        HPU_WEIGHT(i)[k] = MASTER_WEIGHT[k];
+      }
+    }
+
+    printf("th weight: %d %d %d\n", MASTER_WEIGHT[0], MASTER_WEIGHT[1], MASTER_WEIGHT[2]);
 }
 
 void init_handlers(handler_fn *hh, handler_fn *ph, handler_fn *th, void **handler_mem_ptr)

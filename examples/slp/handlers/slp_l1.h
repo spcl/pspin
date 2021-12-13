@@ -5,8 +5,7 @@
 #define DTYPE int32_t
 
 #define TY_FIT_DATA 0
-#define TY_END_FITTING 1
-#define TY_PREDICT 2
+#define TY_PREDICT 1
 typedef struct {
   // 0: fit data
   //    data: input vectors + correct predictions
@@ -18,8 +17,6 @@ typedef struct {
   // number of data samples included
   // must be 0 for type == 1
   uint32_t count;
-  // serial number for proper synchronization
-  uint32_t serial_no;
 } slp_frame_hdr_t;
 
 #endif // define __SLP_L1_H__

@@ -87,18 +87,11 @@ uint32_t fill_packet(uint32_t msg_idx, uint32_t pkt_idx, uint8_t *pkt_buff, uint
         batch = fit_batch;
         payload_len += (VECTOR_LEN + 1) * batch * sizeof(DTYPE);
         break;
-      case 1:
-        ty = TY_END_FITTING;
-        payload_len += sizeof(uint32_t);
-        break;
-      case 2:
+      default:
         ty = TY_PREDICT;
         batch = predict_batch;
         payload_len += VECTOR_LEN * batch * sizeof(DTYPE);
         break;
-      default:
-        printf("ERR: unexpected msg_idx %d\n", msg_idx);
-        abort();
     }
     //printf("filling packet msg_idx=%d pkt_idx=%d ty=%#x\n", msg_idx, pkt_idx, ty);
     if (!diag_printed) {
@@ -124,16 +117,8 @@ uint32_t fill_packet(uint32_t msg_idx, uint32_t pkt_idx, uint8_t *pkt_buff, uint
     slp_frame_hdr_t *pld_hdr = (slp_frame_hdr_t*)((uint8_t*)pkt_buff + sizeof(pkt_hdr_t));
     pld_hdr->type = ty;
     pld_hdr->count = batch;
-    pld_hdr->serial_no = pkt_idx;
 
     DTYPE *pld_body = (DTYPE *)((uint8_t*)pld_hdr + sizeof(slp_frame_hdr_t));
-
-    if (ty == TY_END_FITTING) {
-      uint32_t *last_seq_ptr = (uint32_t *)pld_body;
-      *last_seq_ptr = pkt_idx - 1;
-
-      goto finish;
-    }
 
     for (int i = 0; i < batch; ++i) {
       int sample_idx = i % 8;
@@ -152,7 +137,6 @@ uint32_t fill_packet(uint32_t msg_idx, uint32_t pkt_idx, uint8_t *pkt_buff, uint
 
     //hexdump(pkt_buff, hdr->ip_hdr.length);
 
-finish:
     //return max_pkt_size;
     return hdr->ip_hdr.length;
 }
