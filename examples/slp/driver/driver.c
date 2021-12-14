@@ -71,6 +71,7 @@ void hexdump(const void* data, size_t size) {
 }
 
 bool diag_printed = false;
+bool predict_only = false;
 
 // 3 messages: fit, end-of-fit, predict
 uint32_t fill_packet(uint32_t msg_idx, uint32_t pkt_idx, uint8_t *pkt_buff, uint32_t max_pkt_size, uint32_t* l1_pkt_size)
@@ -81,18 +82,17 @@ uint32_t fill_packet(uint32_t msg_idx, uint32_t pkt_idx, uint8_t *pkt_buff, uint
     int predict_batch = payload_max_size / (VECTOR_LEN * sizeof(DTYPE));
     uint8_t ty;
     uint32_t payload_len = sizeof(slp_frame_hdr_t);
-    switch (msg_idx) {
-      case 0:
-        ty = TY_FIT_DATA;
-        batch = fit_batch;
-        payload_len += (VECTOR_LEN + 1) * batch * sizeof(DTYPE);
-        break;
-      default:
-        ty = TY_PREDICT;
-        batch = predict_batch;
-        payload_len += VECTOR_LEN * batch * sizeof(DTYPE);
-        break;
+
+    if (!predict_only && msg_idx == 0) {
+      ty = TY_FIT_DATA;
+      batch = fit_batch;
+      payload_len += (VECTOR_LEN + 1) * batch * sizeof(DTYPE);
+    } else {
+      ty = TY_PREDICT;
+      batch = predict_batch;
+      payload_len += VECTOR_LEN * batch * sizeof(DTYPE);
     }
+
     //printf("filling packet msg_idx=%d pkt_idx=%d ty=%#x\n", msg_idx, pkt_idx, ty);
     if (!diag_printed) {
       printf("Packet payload max size %d\n", payload_max_size);
@@ -149,6 +149,11 @@ int main(int argc, char**argv)
     const char *th="slp_l1_th";
 
     srand(SEED);
+
+    predict_only = getenv("PREDICT_ONLY") != NULL;
+    if (predict_only) {
+      printf("Note: running prediction only");
+    }
 
     gdriver_init(argc, argv, handlers_file, hh, ph, th);
     gdriver_set_packet_fill_callback(fill_packet);

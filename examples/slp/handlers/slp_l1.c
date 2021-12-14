@@ -112,7 +112,7 @@ __handler__ void slp_l1_hh(handler_args_t *args)
     }
   }
 
-  printf("hh weight: %d %d %d\n", MASTER_WEIGHT[0], MASTER_WEIGHT[1], MASTER_WEIGHT[2]);
+  //printf("hh weight: %d %d %d\n", MASTER_WEIGHT[0], MASTER_WEIGHT[1], MASTER_WEIGHT[2]);
 }
 
 __handler__ void slp_l1_ph(handler_args_t *args)
@@ -174,7 +174,7 @@ __handler__ void slp_l1_th(handler_args_t *args)
       }
     }
 
-    printf("th weight: %d %d %d\n", MASTER_WEIGHT[0], MASTER_WEIGHT[1], MASTER_WEIGHT[2]);
+    //printf("th weight: %d %d %d\n", MASTER_WEIGHT[0], MASTER_WEIGHT[1], MASTER_WEIGHT[2]);
 }
 
 void init_handlers(handler_fn *hh, handler_fn *ph, handler_fn *th, void **handler_mem_ptr)
