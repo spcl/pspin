@@ -106,6 +106,7 @@ namespace PsPIN
         uint64_t max_pkt_latency;
 
         std::unordered_map<axi_addr_t, pktentry> pktmap;
+        std::unordered_map<uint32_t, uint8_t> flow_filter_map;
 
     public:
         NICInbound<AXIPortType>(AXIPortType &ni_mst, ni_control_port_t &ni_ctrl, axi_addr_t l2_pkt_buff_start, uint32_t l2_pkt_buff_size)
@@ -144,6 +145,22 @@ namespace PsPIN
             hers_to_send = 0;
 
             her_cmd_wait = false;
+
+            char* flow_filter_env = getenv("NI_FLOW_FILTER");
+            if (flow_filter_env!=NULL)
+            {
+
+                char* token;
+                char* save_ptr = flow_filter_env;
+            
+                while ((token = strtok_r(save_ptr, ";", &save_ptr)))
+                {
+                    uint32_t flow_to_filter = atoi(token);
+                    flow_filter_map[flow_to_filter] = 1;
+                    printf("NI: filter out flow %u\n", flow_to_filter);
+                }
+            }
+
         }
 
         ~NICInbound()
@@ -318,6 +335,15 @@ namespace PsPIN
 
         bool process_packet(her_descr_t &her_descr, uint8_t *pkt_data, uint32_t pkt_size)
         {
+
+            // filter packets
+            if (flow_filter_map.find(her_descr.msgid) != flow_filter_map.end())
+            {
+                hers_to_send--;
+                check_termination();
+                return true;
+            }
+
             axi_addr_t pkt_addr;
             if (!allocate_pkt_space(pkt_size, &pkt_addr))
             {
@@ -447,6 +473,12 @@ namespace PsPIN
             total_bytes_sent += her.her_size;
             total_pkts++;
 
+            check_termination();
+        }
+
+        void check_termination()
+        {
+            assert(hers_to_send>=0);
             if (hers_to_send == 0 && app_sent_eos)
             {
                 *ni_ctrl.eos_o = 1;
