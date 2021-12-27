@@ -1,8 +1,13 @@
 #ifndef __SLP_L1_H__
 #define __SLP_L1_H__
 
-#define VECTOR_LEN 2
+#ifndef VECTOR_LEN
+#define VECTOR_LEN 8
+#endif
+
+#ifndef DTYPE
 #define DTYPE int32_t
+#endif
 
 #define TY_FIT_DATA 0
 #define TY_PREDICT 1
