@@ -48,21 +48,22 @@ build() {
 }
 
 run() {
+    if [[ $3 -gt $p_cutoff && $5 == "fit" ]]; then
+        return 0 # cutoff
+    fi
     trial_name=eval-$2-$1-p$3-s$4-$5
     cp -R eval-$2-$1 $trial_name
     pushd $trial_name
-    if [[ $3 > $p_cutoff && $5 == "fit" ]]; then
-        return 0 # cutoff
-    fi
-    echo ">>>>>> Evaluating $1 $2 p=$3 s=$4 $5 <<<<<<"
+    echo ">>> Evaluating $1 $2 p=$3 s=$4 $5"
     if [[ $5 == "predict" ]]; then
         export PREDICT_ONLY=1
     fi
-    $EXEC -m 1 -p $3 -s $4 &> $OUT_DATA/$trial_name.transcript.txt || return 2
+    $PWD/$EXEC -m 1 -p $3 -s $4 &> $OUT_DATA/$trial_name.transcript.txt || return 2
     perl $TRACEVIS build/slp_l1 ./trace_core_* > $OUT_DATA/$trial_name.json || return 3
     unset PREDICT_ONLY
     popd
     rm -rf $trial_name
+    echo "<<< Finished $1 $2 p=$3 s=$4 $5"
 }
 
 source ../../sourceme.sh
