@@ -322,7 +322,7 @@ module riscv_load_store_unit (
   end
 
   // Assertions
-  `ifndef VERILATOR
+  //`ifndef VERILATOR
     // Make sure there is no new request when the old one is not yet completely done.
     assert property (@(posedge clk_i) state_q == WaitRValid && data_gnt_i |-> data_rvalid_i)
         else $warning("It should not be possible to get a grant without an rvalid for the last request!");
@@ -333,5 +333,5 @@ module riscv_load_store_unit (
     // Assert that the address does not contain X when request is sent.
     assert property (@(posedge clk_i) data_req_o |-> !$isunknown(data_addr_o))
         else $error("There has been a data request but the address is unknown!");
-  `endif
+  //`endif
 endmodule

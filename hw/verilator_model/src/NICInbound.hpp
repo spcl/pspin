@@ -472,7 +472,7 @@ namespace PsPIN
 
                 SIM_PRINT("INFO FEEDBACK 0x%x %lu %u\n", *ni_ctrl.feedback_her_addr_i, latency, pktentry.size);
 
-                assert(*ni_ctrl.feedback_her_size_i == pktentry.size);
+                //assert(*ni_ctrl.feedback_her_size_i == pktentry.size);
                 free_pkt_space(*ni_ctrl.feedback_her_addr_i, *ni_ctrl.feedback_her_size_i);
 
                 sum_pkt_latency += latency;

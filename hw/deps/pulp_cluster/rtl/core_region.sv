@@ -39,7 +39,8 @@ module core_region
   parameter int     REMAP_ADDRESS           = 0,
   parameter bit     DEM_PER_BEFORE_TCDM_TS  = 1'b0,
   parameter int     INTER_CORE_FIFO_DEPTH   = 0,
-  parameter int     N_PMP_ENTRIES           = 16
+  parameter int     N_PMP_ENTRIES           = 16,
+  parameter bit     USE_STORE_BUFFER        = 1'b0
 `ifndef SYNTHESIS
   ,
   parameter string  L2_SLM_FILE   = "./slm_files/l2_stim.slm",
@@ -285,38 +286,57 @@ module core_region
     .CLUSTER_ID         (  cluster_id_i               )
   );
 
-  riscv_store_buffer #(
-    .Depth      (16),
-    .AddrWidth  (32),
-    .DataWidth  (32)
-  ) i_store_buf (
-    .clk_i    ( clk_int   ),
-    .rst_ni,
-    // Upstream
-    .addr_i       ( periph_data.add         ),
-    .we_ni        ( periph_data.wen         ),
-    .buffer_i     ( core_buffer             ),
-    .be_i         ( periph_data.be          ),
-    .wdata_i      ( periph_data.wdata       ),
-    .atop_i       ( periph_data_atop        ),
-    .req_i        ( periph_data.req         ),
-    .gnt_o        ( periph_data.gnt         ),
-    .rdata_o      ( periph_data.r_rdata     ),
-    .rvalid_o     ( periph_data.r_valid     ),
-    // Downstream
-    .addr_o       ( periph_data_buf.add     ),
-    .we_no        ( periph_data_buf.wen     ),
-    .be_o         ( periph_data_buf.be      ),
-    .wdata_o      ( periph_data_buf.wdata   ),
-    .atop_o       ( periph_data_buf_atop    ),
-    .req_o        ( periph_data_buf.req     ),
-    .gnt_i        ( periph_data_buf.gnt     ),
-    .rdata_i      ( periph_data_buf.r_rdata ),
-    .rvalid_i     ( periph_data_buf.r_valid )
-  );
-  assign periph_data.r_id  =   '0;
-  assign periph_data.r_opc = 1'b0;
-  assign periph_data_buf.id = periph_data.id;
+
+  generate
+    if(USE_STORE_BUFFER == 1'b1) begin : store_buffer_gen
+      riscv_store_buffer #(
+        .Depth      (16),
+        .AddrWidth  (32),
+        .DataWidth  (32)
+      ) i_store_buf (
+        .clk_i    ( clk_int   ),
+        .rst_ni,
+        // Upstream
+        .addr_i       ( periph_data.add         ),
+        .we_ni        ( periph_data.wen         ),
+        .buffer_i     ( core_buffer             ),
+        .be_i         ( periph_data.be          ),
+        .wdata_i      ( periph_data.wdata       ),
+        .atop_i       ( periph_data_atop        ),
+        .req_i        ( periph_data.req         ),
+        .gnt_o        ( periph_data.gnt         ),
+        .rdata_o      ( periph_data.r_rdata     ),
+        .rvalid_o     ( periph_data.r_valid     ),
+        // Downstream
+        .addr_o       ( periph_data_buf.add     ),
+        .we_no        ( periph_data_buf.wen     ),
+        .be_o         ( periph_data_buf.be      ),
+        .wdata_o      ( periph_data_buf.wdata   ),
+        .atop_o       ( periph_data_buf_atop    ),
+        .req_o        ( periph_data_buf.req     ),
+        .gnt_i        ( periph_data_buf.gnt     ),
+        .rdata_i      ( periph_data_buf.r_rdata ),
+        .rvalid_i     ( periph_data_buf.r_valid )
+      );
+      assign periph_data.r_id  =   '0;
+      assign periph_data.r_opc = 1'b0;
+      assign periph_data_buf.id = periph_data.id;
+    end
+    else begin: no_store_buffer_gen
+      assign periph_data_buf.add = periph_data.add;
+      assign periph_data_buf.wen = periph_data.wen;
+      assign periph_data_buf.be = periph_data.be;
+      assign periph_data_buf.wdata = periph_data.wdata;
+      assign periph_data_buf_atop = periph_data_atop;
+      assign periph_data_buf.req = periph_data.req;
+      assign periph_data.gnt = periph_data_buf.gnt;
+      assign periph_data.r_rdata = periph_data_buf.r_rdata;
+      assign periph_data.r_valid = periph_data_buf.r_valid;
+      assign periph_data.r_id = '0;
+      assign periph_data.r_opc = 1'b0;
+      assign periph_data_buf.id = periph_data.id;
+    end
+  endgenerate  
 
   periph_demux #(
     .DEM_PER_BEFORE_TCDM_TS (DEM_PER_BEFORE_TCDM_TS)
