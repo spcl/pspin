@@ -16,6 +16,7 @@ Properties assumed:
 
 #define NUM_SEGMENTS 128
 #define EOL ((uint32_t) -1)
+#define RANGE_START_ANY ((uint32_t) -1)
 #define GET_NODE_PTR(list, idx) (&(list->nodes[idx]))
 #define IS_NODE_MARKED(list, idx) (list->marks[idx])
 
@@ -261,14 +262,15 @@ uint32_t lazylist_insert(lazylist_t *list, lazylist_range_t range)
         spin_lock_unlock(&pred_node->lock);
     }
 
-    if (to_delete) { 
+    if (to_delete) 
+    { 
         lazylist_put_free_node(list, to_delete);
     }
 
     return error;
 }
 
-uint32_t lazylist_pop_front(lazylist_t *list, lazylist_range_t *range)
+uint32_t lazylist_pop_front(lazylist_t *list, int32_t range_left, lazylist_range_t *range)
 {
     uint32_t to_delete_idx;
     uint32_t popped = 0;
@@ -282,13 +284,16 @@ uint32_t lazylist_pop_front(lazylist_t *list, lazylist_range_t *range)
         lazylist_node_t *front = GET_NODE_PTR(list, head_sentinel->next_idx);
         lazylist_node_t *front_next = GET_NODE_PTR(list, front->next_idx);
 
-        // nothing to do is list is empty
+        // nothing to do if list is empty
         if (front->range.left == INT32_MAX) return 0;
+
+        // nothing to do if the list doesn't start where we expect 
+        if (range_left != RANGE_START_ANY && front->range.left != range_left) return 0;
 
         spin_lock_lock(&front->lock);
         spin_lock_lock(&front_next->lock);
 
-        if (lazylist_validate(list, front, front_next)) {    
+        if (lazylist_validate(list, front, front_next) && (front->range.left == range_left || range_left == RANGE_START_ANY)) {    
             *range = front->range;
             list->marks[front->idx] = 1;
             popped = 1;

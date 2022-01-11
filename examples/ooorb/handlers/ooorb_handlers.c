@@ -18,15 +18,25 @@
 
 #include "lazylist.h"
 
+typedef struct rb_state
+{
+    lazylist_t list;
+    uint32_t next_expected_byte;
+} rb_state_t;
+
 __handler__ void ooorb_hh(handler_args_t *args) 
 {
-    lazylist_t* list = (lazylist_t*) (args->task->scratchpad[0]);
-    lazylist_init(list, NUM_SEGMENTS);
+    rb_state_t* state = (rb_state_t*) (args->task->scratchpad[0]);
+
+    // This should be done on the host and then the initialized memory should be copied on the NIC
+    lazylist_init(&(state->list), NUM_SEGMENTS);
+    state->next_expected_byte = 0;
 }
 
 __handler__ void ooorb_ph(handler_args_t *args) 
 {
-    lazylist_t* list = (lazylist_t*) (args->task->scratchpad[0]);
+    rb_state_t* state = (rb_state_t*) (args->task->scratchpad[0]);
+    lazylist_t* list = &(state->list);
     lazylist_range_t range;
     uint32_t* pkt_info = args->task->pkt_mem;
     uint32_t op = pkt_info[0];
@@ -40,27 +50,37 @@ __handler__ void ooorb_ph(handler_args_t *args)
     } 
     else if (op == 1) 
     {
-        uint32_t popped = lazylist_pop_front(list, &range);
+        uint32_t popped = lazylist_pop_front(list, state->next_expected_byte, &range);
         if (popped) {
             //printf("popped range: [%lu, %lu]\n", range.left, range.right);
-        }
-    }
-    else if (op == 2)
-    {
-        lazylist_node_t *head = GET_NODE_PTR(list, list->head_idx);
-
-        while (1)
-        {
-            printf("node: [%lu, %lu]\n", head->range.left, head->range.right);
-            head = GET_NODE_PTR(list, head->next_idx);
-            if (head->range.right == INT32_MAX) break;
+            state->next_expected_byte = range.right + 1;
         }
     }
 }
 
+__handler__ void ooorb_th(handler_args_t *args) 
+{
+
+    rb_state_t* state = (rb_state_t*) (args->task->scratchpad[0]);
+    lazylist_t* list = &(state->list);
+    lazylist_range_t range;
+
+    uint32_t popped = lazylist_pop_front(list, state->next_expected_byte, &range);
+
+    lazylist_node_t *head = GET_NODE_PTR(list, list->head_idx);
+
+    while (1)
+    {
+        printf("node: [%lu, %lu]\n", head->range.left, head->range.right);
+        head = GET_NODE_PTR(list, head->next_idx);
+        if (head->range.right == INT32_MAX) break;
+    }
+}
+
+
 void init_handlers(handler_fn * hh, handler_fn *ph, handler_fn *th, void **handler_mem_ptr)
 {
-    volatile handler_fn handlers[] = {ooorb_hh, ooorb_ph, NULL};
+    volatile handler_fn handlers[] = {ooorb_hh, ooorb_ph, ooorb_th};
     *hh = handlers[0];
     *ph = handlers[1];
     *th = handlers[2];

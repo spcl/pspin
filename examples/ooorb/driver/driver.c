@@ -37,10 +37,6 @@ uint32_t fill_packet(uint32_t msg_idx, uint32_t pkt_idx, uint8_t *pkt_buff, uint
     {
         int_buf[0] = 1;
     } 
-    else if (pkt_idx == 90)
-    {
-        int_buf[0] = 2;
-    }
     return max_pkt_size;
 }
 
@@ -49,7 +45,7 @@ int main(int argc, char**argv)
     const char *handlers_file="build/ooorb";
     const char *hh="ooorb_hh";
     const char *ph="ooorb_ph";
-    const char *th=NULL;
+    const char *th="ooorb_th";
 
     seqnum = 0;
 
