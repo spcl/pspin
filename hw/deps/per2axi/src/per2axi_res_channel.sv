@@ -86,20 +86,22 @@ module per2axi_res_channel
 
       if (axi_master_r_valid_i) begin
          axi_master_r_ready_o = 1'b1;
-         per_slave_r_id_o[axi_master_r_id_i] = 1'b1;
-         per_slave_r_rdata_o = s_per_slave_r_data;
-         per_slave_r_valid_o = 1'b1;
-         if (axi_master_r_resp_i[1]) begin // error
-            axi_xresp_valid_o[axi_master_r_id_i] = 1'b1;
-            if (axi_master_r_resp_i[0]) begin // decoding error
-               axi_xresp_decerr_o[axi_master_r_id_i] = 1'b1;
-            end else begin // slave error (e.g. RAB miss)
-               axi_xresp_slverr_o[axi_master_r_id_i] = 1'b1;
+         if (atop_state_d[axi_master_r_id_i] == NONE) begin
+            per_slave_r_id_o[axi_master_r_id_i] = 1'b1;
+            per_slave_r_rdata_o = s_per_slave_r_data;
+            per_slave_r_valid_o = 1'b1;
+            if (axi_master_r_resp_i[1]) begin // error
+               axi_xresp_valid_o[axi_master_r_id_i] = 1'b1;
+               if (axi_master_r_resp_i[0]) begin // decoding error
+                  axi_xresp_decerr_o[axi_master_r_id_i] = 1'b1;
+               end else begin // slave error (e.g. RAB miss)
+                  axi_xresp_slverr_o[axi_master_r_id_i] = 1'b1;
+               end
             end
          end
       end else if (axi_master_b_valid_i) begin
          axi_master_b_ready_o = 1'b1;
-         if (atop_state_q[axi_master_b_id_i] == NONE) begin
+         if (atop_state_d[axi_master_b_id_i] == NONE) begin
             per_slave_r_valid_o = 1'b1;
             per_slave_r_id_o[axi_master_b_id_i] = 1'b1;
 
