@@ -1,0 +1,4 @@
+*.log
+*.tmp
+hw/verilator_model/obj_dir_*
+hw/verilator_model/lib
