@@ -60,6 +60,7 @@ module cluster_scheduler #(
 );
 
     localparam int unsigned PktBuffMemSlotSize = 64;
+    localparam int unsigned NumRB = 4;
     typedef logic [$clog2(L1_PKT_BUFF_SIZE):0]   pkt_buf_size_t;
     typedef logic [$clog2(L1_PKT_BUFF_SIZE)-1:0] pkt_buf_idx_t;
 
@@ -126,9 +127,10 @@ module cluster_scheduler #(
     );
 
     // Packet buffer allocator
-    cluster_rb #(
+    cluster_rb_shim #(
         .BuffMemLength  (L1_PKT_BUFF_SIZE),
-        .MemSlotSize    (PktBuffMemSlotSize)
+        .MemSlotSize    (PktBuffMemSlotSize),
+        .NumRB          (NumRB)
     ) i_her_alloc (
         .clk_i          (clk_i),
         .rst_ni         (rst_ni),

@@ -138,6 +138,7 @@ SV_SRCS=../deps/axi/src/axi_pkg.sv \
         ../deps/cluster_peripherals/icache_ctrl_unit/mp_pf_icache_ctrl_unit.sv \
         ../deps/pulp_cluster/rtl/cluster_peripherals.sv \
         ../src/pkt_scheduler/cluster_rb.sv \
+        ../src/pkt_scheduler/cluster_rb_shim.sv \
         ../src/pkt_scheduler/cluster_scheduler.sv \
         ../src/cmds/cluster_cmd.sv \
         ../deps/cluster_interconnect/rtl/interfaces/xbar_demux_bus.sv \
