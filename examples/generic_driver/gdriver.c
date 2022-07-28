@@ -157,8 +157,8 @@ void generate_packets()
             }
 
             bool is_last = (pkt_idx + 1 == sim_state.num_packets);
-            uint32_t delay = (is_last) ? sim_state.message_delay : sim_state.packet_delay;
-            pspinsim_packet_add(&(sim_state.ec), msg_idx, pkt_buff, pkt_size, l1_pkt_size, is_last, delay, 0);
+            uint32_t post_delay = (is_last) ? sim_state.message_delay : sim_state.packet_delay;
+            pspinsim_packet_add(&(sim_state.ec), msg_idx, pkt_buff, pkt_size, l1_pkt_size, is_last, 0, post_delay, 0);
             sim_state.packets_sent++;
         }
     }

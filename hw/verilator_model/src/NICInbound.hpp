@@ -43,7 +43,8 @@ namespace PsPIN
             her_descr_t her;
             std::vector<uint8_t> pkt_data;
             size_t pkt_len;
-            uint32_t wait_cycles;
+            uint32_t pre_wait_cycles;
+            uint32_t post_wait_cycles;
         } incoming_her_t;
 
     public:
@@ -67,7 +68,8 @@ namespace PsPIN
         //HERs that are ready to be sent to PsPIN (DMA completed)
         std::queue<her_descr_t> ready_hers;
 
-        uint32_t packet_wait_cycles;
+        uint32_t packet_post_wait_cycles;
+        uint32_t packet_pre_wait_cycles;
 
         FILE *pkt_file;
         FILE *data_file;
@@ -116,7 +118,8 @@ namespace PsPIN
             // Accept feedbacks
             *ni_ctrl.feedback_ready_o = 1;
 
-            packet_wait_cycles = 0;
+            packet_post_wait_cycles = 0;
+            packet_pre_wait_cycles = 0;
 
             pkt_file = NULL;
             data_file = NULL;
@@ -164,14 +167,15 @@ namespace PsPIN
             app_sent_eos = true;
         }
 
-        int add_packet(her_descr_t &her, uint8_t *pkt_data, size_t pkt_len, uint32_t wait_cycles)
+        int add_packet(her_descr_t &her, uint8_t *pkt_data, size_t pkt_len, uint32_t pre_wait_cycles, uint32_t post_wait_cycles)
         {
             incoming_her_t ih;
             ih.her = her;
             ih.pkt_data.resize(pkt_len);
             memcpy(&(ih.pkt_data[0]), pkt_data, pkt_len);
             ih.pkt_len = pkt_len;
-            ih.wait_cycles = wait_cycles;
+            ih.pre_wait_cycles = pre_wait_cycles;
+            ih.post_wait_cycles = post_wait_cycles;
 
             incoming_hers.push(ih);
             hers_to_send++;
@@ -236,7 +240,7 @@ namespace PsPIN
                 her_descr.xfer_size = pkt_xfer_size;
                 her_descr.eom = (eom == 1);
 
-                add_packet(her_descr, pkt_data, pkt_size, wait_cycles);
+                add_packet(her_descr, pkt_data, pkt_size, 0, wait_cycles);
             }
             fclose(data_file);
             fclose(pkt_file);
@@ -339,19 +343,31 @@ namespace PsPIN
             if (incoming_hers.empty())
                 return;
 
-            if (packet_wait_cycles > 0)
+            if (packet_post_wait_cycles > 0)
             {
-                packet_wait_cycles--;
-                if (packet_wait_cycles > 0)
+                packet_post_wait_cycles--;
+                if (packet_post_wait_cycles > 0)
                     return;
             }
 
             incoming_her_t &ih = incoming_hers.front();
 
+            if (ih.pre_wait_cycles>0)
+            {
+                packet_pre_wait_cycles = ih.pre_wait_cycles;
+                ih.pre_wait_cycles = 0;
+            }
+    
+            if (packet_pre_wait_cycles > 0)
+            {
+                packet_pre_wait_cycles--;
+                if (packet_pre_wait_cycles > 0) return;
+            }
+
             if (process_packet(ih.her, &(ih.pkt_data[0]), ih.pkt_len))
             {
                 // we won't serve the next packet before wait_cycles;
-                packet_wait_cycles = ih.wait_cycles;
+                packet_post_wait_cycles = ih.post_wait_cycles;
 
                 incoming_hers.pop();
             }
@@ -359,7 +375,7 @@ namespace PsPIN
             {
                 //the packet is here and we cannot push it to PsPIN because of no space in L2;
                 //still spending "wait" cycles.
-                ih.wait_cycles = (ih.wait_cycles > 0) ? ih.wait_cycles-- : 0;
+                ih.post_wait_cycles = (ih.post_wait_cycles > 0) ? ih.post_wait_cycles-- : 0;
             }
         }
 

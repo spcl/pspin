@@ -197,7 +197,7 @@ int pspinsim_packet_trace_read(const char* pkt_file_path, const char* data_file_
     return ni->read_trace(pkt_file_path, data_file_path);
 }
 
-int pspinsim_packet_add(spin_ec_t* ec, uint32_t msgid, uint8_t* pkt_data, size_t pkt_len, size_t pkt_l1_len, uint8_t eom, uint32_t wait_cycles, uint64_t user_ptr)
+int pspinsim_packet_add(spin_ec_t* ec, uint32_t msgid, uint8_t* pkt_data, size_t pkt_len, size_t pkt_l1_len, uint8_t eom, uint32_t pre_wait_cycles, uint32_t post_wait_cycles, uint64_t user_ptr)
 {
     her_descr_t her;
     memcpy(&(her.mpq_meta), ec, sizeof(spin_ec_t));
@@ -209,7 +209,7 @@ int pspinsim_packet_add(spin_ec_t* ec, uint32_t msgid, uint8_t* pkt_data, size_t
     her.xfer_size = pkt_l1_len;
     her.user_ptr = user_ptr;
 
-    return ni->add_packet(her, pkt_data, pkt_len, wait_cycles);
+    return ni->add_packet(her, pkt_data, pkt_len, pre_wait_cycles, post_wait_cycles);
 }
 
 int pspinsim_packet_eos()

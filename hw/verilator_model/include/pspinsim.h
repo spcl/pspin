@@ -70,7 +70,7 @@ int pspinsim_run_tick(uint8_t *done_flag);
 int pspinsim_fini();
 
 int pspinsim_packet_trace_read(const char* pkt_file_path, const char* data_file_path);
-int pspinsim_packet_add(spin_ec_t* ec, uint32_t msgid, uint8_t* pkt_data, size_t pkt_len, size_t pkt_l1_len, uint8_t eom, uint32_t wait_cycles, uint64_t user_ptr);
+int pspinsim_packet_add(spin_ec_t* ec, uint32_t msgid, uint8_t* pkt_data, size_t pkt_len, size_t pkt_l1_len, uint8_t eom, uint32_t pre_wait_cycles, uint32_t post_wait_cycles, uint64_t user_ptr);
 int pspinsim_packet_eos();
 
 int pspinsim_cb_set_pkt_out(pkt_out_cb_t cb);
