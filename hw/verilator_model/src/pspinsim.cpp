@@ -333,3 +333,9 @@ int spin_find_handler_by_name(const char *binfile, const char* handler_name, spi
 
     return SPIN_SUCCESS;
 }
+
+double pspinsim_get_simtime()
+{
+    return sc_time_stamp();
+}
+
