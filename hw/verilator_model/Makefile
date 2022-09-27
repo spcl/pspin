@@ -8,8 +8,8 @@ CXX ?= g++
 VERILATOR_COMPILER_WORKERS ?= 8
 
 TRACE_DEPTH?=6
-VFLAGS_RELEASE=--Mdir obj_dir_release --sv -Wno-UNOPTFLAT -Wno-NOLATCH -Wno-WIDTHCONCAT -j $(VERILATOR_COMPILER_WORKERS) +systemverilogext+sv -Wno-lint -CFLAGS "-fPIC"
-VFLAGS_DEBUG=--Mdir obj_dir_debug --sv --assert --trace --trace-structs --trace-depth $(TRACE_DEPTH) -CFLAGS "-DVERILATOR_HAS_TRACE -fPIC" -Wno-UNOPTFLAT -Wno-NOLATCH -Wno-WIDTHCONCAT -j $(VERILATOR_COMPILER_WORKERS) +systemverilogext+sv -Wno-lint
+VFLAGS_RELEASE=--Mdir obj_dir_release --sv -Wno-COMBDLY -Wno-UNOPTFLAT -Wno-NOLATCH -Wno-WIDTHCONCAT -j $(VERILATOR_COMPILER_WORKERS) +systemverilogext+sv -Wno-lint -CFLAGS "-fPIC"
+VFLAGS_DEBUG=--Mdir obj_dir_debug --sv --assert --trace --trace-structs --trace-depth $(TRACE_DEPTH) -CFLAGS "-DVERILATOR_HAS_TRACE -fPIC" -Wno-COMBDLY -Wno-UNOPTFLAT -Wno-NOLATCH -Wno-WIDTHCONCAT -j $(VERILATOR_COMPILER_WORKERS) +systemverilogext+sv -Wno-lint
 
 
 LIB_RELEASE_FLAGS=-fPIC --std=c++11 -Os -shared -Iobj_dir_release -I$(VERILATOR_ROOT)/include -I$(VERILATOR_ROOT)/include/vltstd/ -Iinclude/ 

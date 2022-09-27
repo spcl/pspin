@@ -278,10 +278,10 @@ namespace PsPIN
                 *addr = l2_pkt_buff_start + tail_ptr;
                 tail_ptr += pkt_size;
                 in_flight_packets++;
-                SIM_PRINT("NIC inbound engine: allocated %u bytes; head_ptr: %lu; tail_ptr: %lu; in_flight_packets: %lu\n", pkt_size, head_ptr, tail_ptr, in_flight_packets);
+                SIM_PRINT("NIC inbound engine: allocated %u bytes; head_ptr: %lu; tail_ptr: %lu; in_flight_packets: %u\n", pkt_size, head_ptr, tail_ptr, in_flight_packets);
             }
             else{
-                SIM_PRINT("NIC inbound engine: allocation failed! bytes: %u; head_ptr: %lu; tail_ptr: %lu; in_flight_packets: %lu\n", pkt_size, head_ptr, tail_ptr, in_flight_packets);
+                SIM_PRINT("NIC inbound engine: allocation failed! bytes: %u; head_ptr: %lu; tail_ptr: %lu; in_flight_packets: %u\n", pkt_size, head_ptr, tail_ptr, in_flight_packets);
             }
 
             return can_allocate;
@@ -305,7 +305,7 @@ namespace PsPIN
 
                 head_ptr += head_ptr_increase;
                 in_flight_packets--;
-                SIM_PRINT("NIC inbound engine: freeing %u bytes; head_ptr: %lu; tail_ptr: %lu; in_flight_packets: %lu; cut: %u; cut_ptr: %lu\n", head_ptr_increase, head_ptr, tail_ptr, in_flight_packets, (uint32_t) cut, cut_ptr);
+                SIM_PRINT("NIC inbound engine: freeing %u bytes; head_ptr: %lu; tail_ptr: %lu; in_flight_packets: %u; cut: %u; cut_ptr: %lu\n", head_ptr_increase, head_ptr, tail_ptr, in_flight_packets, (uint32_t) cut, cut_ptr);
 
                 if (cut && head_ptr == cut_ptr)
                 {
