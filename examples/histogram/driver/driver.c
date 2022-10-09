@@ -20,7 +20,7 @@
 #define SEED 236695
 
 uint32_t fill_packet(uint32_t msg_idx, uint32_t pkt_idx, uint8_t *pkt_buff, uint32_t max_pkt_size, uint32_t* l1_pkt_size)
-{   
+{
     pkt_hdr_t *hdr = (pkt_hdr_t*) pkt_buff;
     hdr->ip_hdr.ihl = 5;
     hdr->ip_hdr.length = max_pkt_size;
@@ -45,8 +45,8 @@ int main(int argc, char**argv)
 
     srand(SEED);
 
-    gdriver_init(argc, argv, handlers_file, hh, ph, th);
-    gdriver_set_packet_fill_callback(fill_packet);
+    gdriver_init(argc, argv);
+    gdriver_add_ectx(handlers_file, hh, ph, th, fill_packet, NULL, 42);
 
     gdriver_run();
 
