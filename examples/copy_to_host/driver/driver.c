@@ -22,8 +22,9 @@ int main(int argc, char**argv)
     const char *ph="copy_to_host_ph";
     const char *th=NULL;
 
-    gdriver_init(argc, argv, handlers_file, hh, ph, th);
-   
+    gdriver_init(argc, argv);
+    gdriver_add_ectx(handlers_file, hh, ph, th, NULL, NULL, 42);
+
     gdriver_run();
 
     gdriver_fini();

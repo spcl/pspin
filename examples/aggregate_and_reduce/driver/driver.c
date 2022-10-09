@@ -15,19 +15,27 @@
 #include <stdint.h>
 #include "gdriver.h"
 
-
 int main(int argc, char**argv)
 {
-    const char *handlers_file="build/reduce_l1";
-    const char *hh=NULL;
-    const char *ph="reduce_l1_ph";
-    const char *th="reduce_l1_th";
+    const char *handlers_file = "build/aggregate_and_reduce";
+
+    const char *hh_aggregate = NULL;
+    const char *ph_aggregate = "aggregate_global_ph";
+    const char *th_aggregate = "aggregate_global_th";
+
+    const char *hh_reduce = NULL;
+    const char *ph_reduce = "reduce_l1_ph";
+    const char *th_reduce = "reduce_l1_th";
 
     gdriver_init(argc, argv);
-    gdriver_add_ectx(handlers_file, hh, ph, th, NULL, NULL, 42);
+
+    gdriver_add_ectx(handlers_file, hh_aggregate, ph_aggregate, th_aggregate,
+        NULL, NULL, 42);
+    gdriver_add_ectx(handlers_file, hh_reduce, ph_reduce, th_reduce, NULL, NULL, 42);
 
     gdriver_run();
 
     gdriver_fini();
+
     return 0;
 }

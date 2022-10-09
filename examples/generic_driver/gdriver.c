@@ -27,14 +27,22 @@
 
 #define SLM_FILES "build/slm_files/"
 
+#define EC_MAX_NUM 2
+
 #define NIC_L2_ADDR 0x1c300000
 #define NIC_L2_SIZE (1024 * 1024)
+#define NIC_L2_EC_CHUNK_SIZE (NIC_L2_SIZE / EC_MAX_NUM)
 
 #define HOST_ADDR 0xdeadbeefdeadbeef
 #define HOST_SIZE (1024 * 1024 * 1024)
+#define HOST_EC_CHUNK_SIZE (HOST_SIZE / EC_MAX_NUM)
 
 #define SCRATCHPAD_REL_ADDR 0
 #define SCRATCHPAD_SIZE (800 * 1024)
+#define SCRATCHPAD_EC_CHUNK_SIZE (SCRATCHPAD_SIZE / EC_MAX_NUM)
+
+#define EC_MEM_BASE_ADDR(generic_ectx_id, base, chunk_size) \
+    (base + (generic_ectx_id * chunk_size))
 
 #define CHECK_ERR(S)                   \
     {                                  \
@@ -43,232 +51,229 @@
             return res;                \
     }
 
-typedef struct sim_descr
+typedef struct gdriver_ectx
 {
-    const char *handlers_exe;
+    spin_ec_t ectx;
+    fill_packet_fun_t pkt_fill_cb;
+} gdriver_ectx_t;
 
-    //handler names
-    const char *hh_name;
-    const char *ph_name;
-    const char *th_name;
+typedef struct gdriver_sim_descr
+{
+    gdriver_ectx_t ectxs[EC_MAX_NUM];
+    uint32_t num_ectxs;
 
-    //packet generator
     uint32_t num_messages;
     uint32_t num_packets;
     uint32_t packet_size;
     uint32_t packet_delay;
     uint32_t message_delay;
 
-    //L2
-    uint32_t handler_mem_addr;
-    uint32_t handler_mem_size;
-
-    //L1
-    uint32_t scratchpad_addr[NUM_CLUSTERS];
-    uint32_t scratchpad_size[NUM_CLUSTERS];
-
-    //host memory
-    uint64_t host_mem_addr;
-    uint64_t host_mem_size;
-
-    spin_ec_t ec;
-
-    fill_packet_fun_t pkt_fill_fun;
-    void *l2_img_to_copy;
-    size_t l2_img_to_copy_size;
-
-    // counters
     uint32_t packets_sent;
     uint32_t packets_processed;
-} sim_descr_t;
+} gdriver_sim_descr_t;
 
-static sim_descr_t sim_state;
+static gdriver_sim_descr_t sim_state;
 
-void pcie_mst_write_complete(void *user_ptr);
-
-int make_ec()
+static void gdriver_dump_ectx_info(const gdriver_ectx_t *gectx)
 {
-    spin_nic_addr_t hh_addr = 0, ph_addr = 0, th_addr = 0;
-    size_t hh_size = 0, ph_size = 0, th_size = 0;
-
-    if (sim_state.hh_name != NULL) 
-    {
-        CHECK_ERR(spin_find_handler_by_name(sim_state.handlers_exe, sim_state.hh_name, &hh_addr, &hh_size));
-    }
-
-    if (sim_state.ph_name != NULL) 
-    {
-        CHECK_ERR(spin_find_handler_by_name(sim_state.handlers_exe, sim_state.ph_name, &ph_addr, &ph_size));
-    }
-
-    if (sim_state.th_name != NULL) 
-    {
-        CHECK_ERR(spin_find_handler_by_name(sim_state.handlers_exe, sim_state.th_name, &th_addr, &th_size));
-    }
-
-    printf("hh_addr: %x; hh_size: %lu;\n", hh_addr, hh_size);
-    printf("ph_addr: %x; ph_size: %lu;\n", ph_addr, ph_size);
-    printf("th_addr: %x; th_size: %lu;\n", th_addr, th_size);
-
-    sim_state.ec.handler_mem_addr = sim_state.handler_mem_addr;
-    sim_state.ec.handler_mem_size = sim_state.handler_mem_size;
-    sim_state.ec.host_mem_addr = sim_state.host_mem_addr;
-    sim_state.ec.host_mem_size = sim_state.host_mem_size;
-    sim_state.ec.hh_addr = hh_addr;
-    sim_state.ec.ph_addr = ph_addr;
-    sim_state.ec.th_addr = th_addr;
-    sim_state.ec.hh_size = hh_size;
-    sim_state.ec.ph_size = ph_size;
-    sim_state.ec.th_size = th_size;
-
-    for (int i = 0; i < NUM_CLUSTERS; i++)
-    {
-        sim_state.ec.scratchpad_addr[i] = sim_state.scratchpad_addr[i];
-        sim_state.ec.scratchpad_size[i] = sim_state.scratchpad_size[i];
-    }
+    printf("gectx %p info:\n", gectx);
+    printf("hh_addr: %x; hh_size: %u;\n",
+        gectx->ectx.hh_addr, gectx->ectx.hh_size);
+    printf("ph_addr: %x; ph_size: %u;\n",
+        gectx->ectx.ph_addr, gectx->ectx.ph_size);
+    printf("th_addr: %x; th_size: %u;\n",
+        gectx->ectx.th_addr, gectx->ectx.th_size);
+    printf("handler_mem_addr: %x; handler_mem_size: %u\n",
+        gectx->ectx.handler_mem_addr, gectx->ectx.handler_mem_size);
+    printf("host_mem_addr: %lx; host_mem_size: %u\n",
+        gectx->ectx.host_mem_addr, gectx->ectx.host_mem_size);
 }
 
-
-void generate_packets()
+static void gdriver_generate_packets()
 {
-    spin_ec_t ec;
+    uint32_t global_msg_counter = 0, global_packet_counter = 0;
+    uint8_t *pkt_buf;
+    uint32_t pkt_size, l1_pkt_size, delay;
+    pkt_hdr_t *hdr;
+    bool is_last;
 
-    uint8_t *pkt_buff = (uint8_t *)malloc(sizeof(uint8_t) * (sim_state.packet_size));
-    assert(pkt_buff != NULL);
+    pkt_buf = (uint8_t *)malloc(sizeof(uint8_t) * (sim_state.packet_size));
+    assert(pkt_buf != NULL);
 
-    for (uint32_t msg_idx = 0; msg_idx < sim_state.num_messages; msg_idx++)
-    {
-        for (uint32_t pkt_idx = 0; pkt_idx < sim_state.num_packets; pkt_idx++)
-        {
-            uint32_t pkt_size = sim_state.packet_size;
-            uint32_t l1_pkt_size = pkt_size;
+    for (uint32_t ectx_idx = 0; ectx_idx < sim_state.num_ectxs; ectx_idx++) {
+        for (uint32_t msg_idx = 0; msg_idx < sim_state.num_messages; msg_idx++) {
+            for (uint32_t pkt_idx = 0; pkt_idx < sim_state.num_packets; pkt_idx++) {
+                pkt_size = sim_state.packet_size;
+                l1_pkt_size = pkt_size;
 
-            if (sim_state.pkt_fill_fun != NULL)
-            {
-                pkt_size = sim_state.pkt_fill_fun(msg_idx, pkt_idx, pkt_buff, sim_state.packet_size, &l1_pkt_size);
+                if (sim_state.ectxs[ectx_idx].pkt_fill_cb != NULL) {
+                    pkt_size = sim_state.ectxs[ectx_idx].pkt_fill_cb(
+                        global_msg_counter + msg_idx, global_packet_counter + pkt_idx,
+                        pkt_buf, sim_state.packet_size, &l1_pkt_size);
+                } else {
+                    // generate IP+UDP headers
+                    hdr = (pkt_hdr_t*)pkt_buf;
+                    hdr->ip_hdr.ihl = 5;
+                    hdr->ip_hdr.length = pkt_size;
+                    // TODO: set other fields
+                }
+
+                is_last = (pkt_idx + 1 == sim_state.num_packets);
+                delay = (is_last) ? sim_state.message_delay : sim_state.packet_delay;
+
+                pspinsim_packet_add(
+                    &(sim_state.ectxs[ectx_idx].ectx), global_msg_counter + msg_idx,
+                    pkt_buf, pkt_size, l1_pkt_size, is_last, delay, 0);
+
+                global_packet_counter++;
+
+                sim_state.packets_sent++;
             }
-            else
-            {
-                // generate IP+UDP headers
-                pkt_hdr_t *hdr = (pkt_hdr_t*) pkt_buff;
-                hdr->ip_hdr.ihl = 5;
-                hdr->ip_hdr.length = pkt_size;
-                // TODO: set other fields
-            }
-
-            bool is_last = (pkt_idx + 1 == sim_state.num_packets);
-            uint32_t delay = (is_last) ? sim_state.message_delay : sim_state.packet_delay;
-            pspinsim_packet_add(&(sim_state.ec), msg_idx, pkt_buff, pkt_size, l1_pkt_size, is_last, delay, 0);
-            sim_state.packets_sent++;
+            global_msg_counter++;
         }
     }
 
     pspinsim_packet_eos();
 
-    free(pkt_buff);
+    free(pkt_buf);
 }
 
-void pcie_mst_write_complete(void *user_ptr)
+static void gdriver_pcie_mst_write_complete(void *user_ptr)
 {
     printf("Write to NIC memory completed (user_ptr: %p)\n", user_ptr);
-    generate_packets();
 }
 
-void feedback(uint64_t user_ptr, uint64_t nic_arrival_time, uint64_t pspin_arrival_time, uint64_t feedback_time)
+static void gdriver_feedback(uint64_t user_ptr, uint64_t nic_arrival_time,
+    uint64_t pspin_arrival_time, uint64_t feedback_time)
 {
     sim_state.packets_processed++;
 }
 
-/*** interface ***/
-
-int gdriver_set_packet_fill_callback(fill_packet_fun_t pkt_fill_fun)
+static int gdriver_init_ectx(gdriver_ectx_t *gectx, uint32_t gectx_id,
+    const char *handlers_exe, const char *hh_name,
+    const char *ph_name, const char *th_name,
+    fill_packet_fun_t fill_cb, void *l2_img, size_t l2_img_size)
 {
-    sim_state.pkt_fill_fun = pkt_fill_fun;
+    spin_nic_addr_t hh_addr = 0, ph_addr = 0, th_addr = 0;
+    size_t hh_size = 0, ph_size = 0, th_size = 0;
+
+    if ((hh_name == NULL) && (ph_name == NULL) && (th_name == NULL))
+        return GDRIVER_ERR;
+
+    if (hh_name != NULL)
+        CHECK_ERR(spin_find_handler_by_name(handlers_exe, hh_name, &hh_addr, &hh_size));
+
+    if (ph_name != NULL)
+        CHECK_ERR(spin_find_handler_by_name(handlers_exe, ph_name, &ph_addr, &ph_size));
+
+    if (th_name != NULL)
+        CHECK_ERR(spin_find_handler_by_name(handlers_exe, th_name, &th_addr, &th_size));
+
+    gectx->ectx.hh_addr = hh_addr;
+    gectx->ectx.ph_addr = ph_addr;
+    gectx->ectx.th_addr = th_addr;
+    gectx->ectx.hh_size = hh_size;
+    gectx->ectx.ph_size = ph_size;
+    gectx->ectx.th_size = th_size;
+
+    /*
+     * For now assume that each execution context had its own region of host/L1/L2
+     * memories.
+     *
+     * See macro on top for clarity.
+     */
+
+    gectx->ectx.handler_mem_addr = EC_MEM_BASE_ADDR(gectx_id,
+        NIC_L2_ADDR, NIC_L2_EC_CHUNK_SIZE);
+    gectx->ectx.handler_mem_size = NIC_L2_EC_CHUNK_SIZE;
+    assert(gectx->ectx.handler_mem_addr < (NIC_L2_ADDR + NIC_L2_SIZE));
+
+    gectx->ectx.host_mem_addr = EC_MEM_BASE_ADDR(gectx_id,
+        HOST_ADDR, HOST_EC_CHUNK_SIZE);
+    gectx->ectx.host_mem_size = HOST_EC_CHUNK_SIZE;
+    assert(gectx->ectx.host_mem_addr < (HOST_ADDR + HOST_SIZE));
+
+    for (int i = 0; i < NUM_CLUSTERS; i++) {
+        gectx->ectx.scratchpad_addr[i] = EC_MEM_BASE_ADDR(gectx_id,
+            SCRATCHPAD_REL_ADDR, SCRATCHPAD_EC_CHUNK_SIZE);
+        gectx->ectx.scratchpad_size[i] = SCRATCHPAD_EC_CHUNK_SIZE;
+        assert(gectx->ectx.scratchpad_addr[i] < (SCRATCHPAD_REL_ADDR + SCRATCHPAD_SIZE));
+    }
+
+    gectx->pkt_fill_cb = fill_cb;
+
+    if (l2_img) {
+        assert(l2_img_size <= gectx->ectx.handler_mem_size);
+        spin_nicmem_write(gectx->ectx.handler_mem_addr,
+            (void *)l2_img, l2_img_size, (void *)0);
+    }
+
+    gdriver_dump_ectx_info(gectx);
+
     return GDRIVER_OK;
 }
 
-int gdriver_set_l2_img(void *img, size_t size)
+int gdriver_add_ectx(const char *hfile, const char *hh, const char *ph, const char *th,
+    fill_packet_fun_t fill_pkt_cb, void *l2_img, size_t l2_img_size)
 {
-    sim_state.l2_img_to_copy = img;
-    sim_state.l2_img_to_copy_size = size;
-    return GDRIVER_OK;
-}
+    int ret;
 
-int gdriver_init(int argc, char **argv, const char *hfile, const char *hh, const char *ph, const char *th)
-{
-    struct gengetopt_args_info ai;
-    pspin_conf_t conf;
+    if (sim_state.num_ectxs == EC_MAX_NUM)
+        return GDRIVER_ERR;
 
-    if (cmdline_parser(argc, argv, &ai) != 0)
-    {
+    if (gdriver_init_ectx(&(sim_state.ectxs[sim_state.num_ectxs]),
+        sim_state.num_ectxs, hfile, hh, ph, th,
+        fill_pkt_cb, l2_img, l2_img_size)) {
         return GDRIVER_ERR;
     }
 
-    pspinsim_default_conf(&conf);
-    conf.slm_files_path = SLM_FILES;
-
-    pspinsim_init(argc, argv, &conf);
-
-    pspinsim_cb_set_pcie_mst_write_completion(pcie_mst_write_complete);
-    pspinsim_cb_set_pkt_feedback(feedback);
-
-    memset(&sim_state, 0, sizeof(sim_state));
-
-    sim_state.handlers_exe = hfile;
-    sim_state.hh_name = hh;
-    sim_state.ph_name = ph;
-    sim_state.th_name = th;
-    sim_state.num_messages = ai.num_messages_arg;
-    sim_state.num_packets = ai.num_packets_arg;
-    sim_state.packet_size = ai.packet_size_arg;
-    sim_state.packet_delay = ai.packet_delay_arg;
-    sim_state.message_delay = ai.message_delay_arg;
-    sim_state.handler_mem_addr = NIC_L2_ADDR;
-    sim_state.handler_mem_size = NIC_L2_SIZE;
-    sim_state.host_mem_addr = HOST_ADDR;
-    sim_state.host_mem_size = HOST_SIZE;
-
-    sim_state.scratchpad_addr[NUM_CLUSTERS];
-    sim_state.scratchpad_size[NUM_CLUSTERS];
-
-    for (int i = 0; i < NUM_CLUSTERS; i++)
-    {
-        sim_state.scratchpad_addr[i] = SCRATCHPAD_REL_ADDR;
-        sim_state.scratchpad_size[i] = SCRATCHPAD_SIZE;
-    }
-
-    make_ec();
+    sim_state.num_ectxs++;
 
     return GDRIVER_OK;
 }
 
 int gdriver_run()
 {
-    if (sim_state.l2_img_to_copy != NULL)
-    {
-        spin_nic_addr_t dest = sim_state.handler_mem_addr;
-        uint32_t dest_capacity = sim_state.handler_mem_size;
-        void *src = sim_state.l2_img_to_copy;
-        spin_nic_addr_t src_size = sim_state.l2_img_to_copy_size;
+    gdriver_generate_packets();
 
-        assert(src_size <= dest_capacity);
-        printf("Copying %d bytes to %x (src: %p)\n", src_size, dest, src);
-        spin_nicmem_write(dest, (void *)src, src_size, (void *)0);
-    }
-    else
-    {
-        generate_packets();
-    }
-
-    if (pspinsim_run() == SPIN_SUCCESS)
+    if (pspinsim_run() == SPIN_SUCCESS) {
         return GDRIVER_OK;
-    else
+    } else {
         return GDRIVER_ERR;
+    }
 }
 
 int gdriver_fini()
 {
     if (pspinsim_fini() == SPIN_SUCCESS)
         return sim_state.packets_sent == sim_state.packets_processed;
+
     return GDRIVER_ERR;
+}
+
+int gdriver_init(int argc, char **argv)
+{
+    struct gengetopt_args_info ai;
+    pspin_conf_t conf;
+
+    if (cmdline_parser(argc, argv, &ai) != 0)
+        return GDRIVER_ERR;
+
+    pspinsim_default_conf(&conf);
+    conf.slm_files_path = SLM_FILES;
+
+    pspinsim_init(argc, argv, &conf);
+
+    pspinsim_cb_set_pcie_mst_write_completion(gdriver_pcie_mst_write_complete);
+    pspinsim_cb_set_pkt_feedback(gdriver_feedback);
+
+    memset(&sim_state, 0, sizeof(sim_state));
+
+    sim_state.num_messages = ai.num_messages_arg;
+    sim_state.num_packets = ai.num_packets_arg;
+    sim_state.packet_size = ai.packet_size_arg;
+    sim_state.packet_delay = ai.packet_delay_arg;
+    sim_state.message_delay = ai.message_delay_arg;
+
+    return GDRIVER_OK;
 }
