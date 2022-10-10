@@ -152,11 +152,11 @@ int main(int argc, char**argv)
 
     predict_only = getenv("PREDICT_ONLY") != NULL;
     if (predict_only) {
-      printf("Note: running prediction only");
+        printf("Note: running prediction only");
     }
 
-    gdriver_init(argc, argv, handlers_file, hh, ph, th);
-    gdriver_set_packet_fill_callback(fill_packet);
+    gdriver_init(argc, argv);
+    gdriver_add_ectx(handlers_file, hh, ph, th, fill_packet, NULL, 42);
 
     gdriver_run();
 

@@ -19,7 +19,7 @@ static uint32_t seqnum;
 
 
 uint32_t fill_packet(uint32_t msg_idx, uint32_t pkt_idx, uint8_t *pkt_buff, uint32_t max_pkt_size, uint32_t* l1_pkt_size)
-{   
+{
     // nothing to do here
 
     uint32_t* int_buf = (uint32_t*) pkt_buff;
@@ -32,11 +32,11 @@ uint32_t fill_packet(uint32_t msg_idx, uint32_t pkt_idx, uint8_t *pkt_buff, uint
         int_buf[0] = 0;
         int_buf[1] = pkt_idx*range_size;
         int_buf[2] = (pkt_idx+1)*range_size - 1;
-    } 
+    }
     else if (pkt_idx <= 30)
     {
         int_buf[0] = 1;
-    } 
+    }
     return max_pkt_size;
 }
 
@@ -49,9 +49,9 @@ int main(int argc, char**argv)
 
     seqnum = 0;
 
-    gdriver_init(argc, argv, handlers_file, hh, ph, th);
-    gdriver_set_packet_fill_callback(fill_packet);
-   
+    gdriver_init(argc, argv);
+    gdriver_add_ectx(handlers_file, hh, ph, th, fill_packet, NULL, 42);
+
     gdriver_run();
 
     return (gdriver_fini()) ? EXIT_SUCCESS : EXIT_FAILURE;

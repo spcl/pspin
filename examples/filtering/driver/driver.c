@@ -62,13 +62,12 @@ int main(int argc, char **argv)
 
     srand(SEED);
 
-    gdriver_init(argc, argv, handlers_file, hh, ph, th);
-    gdriver_set_packet_fill_callback(fill_packet);
-
     uint32_t *vec = (uint32_t *)malloc(sizeof(uint32_t) * (TOT_WORDS));
     fill_htable(vec, TOT_WORDS);
 
-    gdriver_set_l2_img((void *)vec, sizeof(uint32_t) * (TOT_WORDS));
+    gdriver_init(argc, argv);
+    gdriver_add_ectx(handlers_file, hh, ph, th, fill_packet,
+        (void *)vec, sizeof(uint32_t) * (TOT_WORDS));
 
     gdriver_run();
 
