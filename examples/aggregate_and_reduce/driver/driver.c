@@ -1,4 +1,4 @@
-// Copyright 2020 ETH Zurich
+// Copyright 2022 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,20 +18,20 @@
 int main(int argc, char**argv)
 {
     const char *handlers_file = "build/aggregate_and_reduce";
-
     const char *hh_aggregate = NULL;
     const char *ph_aggregate = "aggregate_global_ph";
     const char *th_aggregate = "aggregate_global_th";
-
     const char *hh_reduce = NULL;
     const char *ph_reduce = "reduce_l1_ph";
     const char *th_reduce = "reduce_l1_th";
-
-    gdriver_init(argc, argv);
+    int ectx_num;
+    
+    gdriver_init(argc, argv, NULL, &ectx_num);
 
     gdriver_add_ectx(handlers_file, hh_aggregate, ph_aggregate, th_aggregate,
-        NULL, NULL, 42);
-    gdriver_add_ectx(handlers_file, hh_reduce, ph_reduce, th_reduce, NULL, NULL, 42);
+	NULL, NULL, 0, NULL, 0);
+    gdriver_add_ectx(handlers_file, hh_reduce, ph_reduce, th_reduce,
+	NULL, NULL, 0, NULL, 0);
 
     gdriver_run();
 
