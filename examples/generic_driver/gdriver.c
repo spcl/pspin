@@ -1,4 +1,4 @@
-// Copyright 2020 ETH Zurich
+// Copyright 2022 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -106,12 +106,29 @@ static void gdriver_dump_ectx_info(const gdriver_ectx_t *gectx)
     printf("[GDRIVER] matching context=%s\n", gectx->matching_ctx ? gectx->matching_ctx : "NULL");
 }
 
+static void gdriver_fill_pkt(int ectx_idx, uint32_t msg_idx, uint32_t pkt_idx,
+    uint8_t *pkt_buf, uint32_t pkt_size, uint32_t *l1_pkt_size)
+{
+    pkt_hdr_t *hdr;
+
+    if (sim_state.ectxs[ectx_idx].pkt_fill_cb != NULL) {
+	pkt_size = sim_state.ectxs[ectx_idx].pkt_fill_cb(
+	    msg_idx, pkt_idx, pkt_buf, sim_state.tgen.packet_size, l1_pkt_size);
+    } else {
+	// generate IP+UDP headers
+	hdr = (pkt_hdr_t*)pkt_buf;
+	hdr->ip_hdr.ihl = 5;
+	hdr->ip_hdr.length = pkt_size;
+	*l1_pkt_size = pkt_size;
+	// TODO: set other fields
+    }
+}
+
 static void gdriver_generate_packets()
 {
     uint32_t global_msg_counter = 0, global_packet_counter = 0;
     uint8_t *pkt_buf;
-    uint32_t pkt_size, l1_pkt_size, delay;
-    pkt_hdr_t *hdr;
+    uint32_t pkt_size, l1_pkt_size, delay;    
     int is_last;
 
     printf("[GDRIVER]: Using default packet generator\n");
@@ -123,30 +140,16 @@ static void gdriver_generate_packets()
         for (uint32_t msg_idx = 0; msg_idx < sim_state.tgen.num_messages; msg_idx++) {
             for (uint32_t pkt_idx = 0; pkt_idx < sim_state.tgen.num_packets; pkt_idx++) {
                 pkt_size = sim_state.tgen.packet_size;
-                l1_pkt_size = pkt_size;
-                if (sim_state.ectxs[ectx_idx].pkt_fill_cb != NULL) {
-                    pkt_size = sim_state.ectxs[ectx_idx].pkt_fill_cb(
-                        global_msg_counter + msg_idx, global_packet_counter + pkt_idx,
-                        pkt_buf, sim_state.tgen.packet_size, &l1_pkt_size);
-                } else {
-                    // generate IP+UDP headers
-                    hdr = (pkt_hdr_t*)pkt_buf;
-                    hdr->ip_hdr.ihl = 5;
-                    hdr->ip_hdr.length = pkt_size;
-                    // TODO: set other fields
-                }
 
+		gdriver_fill_pkt(ectx_idx, global_msg_counter + msg_idx, global_packet_counter + pkt_idx,
+		    pkt_buf, pkt_size, &l1_pkt_size);                
                 is_last = (pkt_idx + 1 == sim_state.tgen.num_packets);
-                delay = (is_last) ? sim_state.tgen.message_delay :
-                    sim_state.tgen.packet_delay;
+                delay = (is_last) ? sim_state.tgen.message_delay : sim_state.tgen.packet_delay;
 
-                printf("[GDRIVER]: ectx_id=%u msg_idx=%u, pkt_idx=%u %s\n",
-                    ectx_idx, ectx_idx + msg_idx, pkt_idx, is_last ? "<-----LAST" : "");
-                pspinsim_packet_add(
-                    &(sim_state.ectxs[ectx_idx].ectx), global_msg_counter + msg_idx,
+                pspinsim_packet_add(&(sim_state.ectxs[ectx_idx].ectx), global_msg_counter + msg_idx,
                     pkt_buf, pkt_size, l1_pkt_size, is_last, delay, 0);
 
-                sim_state.tgen.packets_sent++;
+		sim_state.tgen.packets_sent++;
                 global_packet_counter++;
             }
             global_msg_counter++;
@@ -199,12 +202,13 @@ static void gdriver_parse_trace()
                     break;
                 }
             }
-
             assert(matched);
 
-            l1_pkt_size = pkt_size;
-            pspinsim_packet_add(&(sim_state.ectxs[ectx_id].ectx), msgid, pkt_buf, pkt_size, l1_pkt_size, is_last, wait_cycles, 0);
-            wait_cycles = 0;
+	    gdriver_fill_pkt(ectx_id, msgid, 0, pkt_buf, pkt_size, &l1_pkt_size);
+	    pspinsim_packet_add(&(sim_state.ectxs[ectx_id].ectx), msgid,
+		pkt_buf, pkt_size, l1_pkt_size, is_last, wait_cycles, 0);
+
+	    wait_cycles = 0;
         }
         sim_state.ttrace.packets_parsed++;
     }
@@ -260,7 +264,7 @@ static int gdriver_init_ectx(gdriver_ectx_t *gectx, uint32_t gectx_id,
      * For now assume that each execution context had its own region of host/L1/L2
      * memories.
      *
-     * See macro on top for clarity.
+     * See EC_MEM_BASE_ADDR macro definition for clarity.
      */
 
     gectx->ectx.handler_mem_addr = EC_MEM_BASE_ADDR(gectx_id,
@@ -308,7 +312,8 @@ int gdriver_add_ectx(const char *hfile, const char *hh, const char *ph, const ch
     if (matching_ctx_size > GDRIVER_MATCHING_CTX_MAXSIZE)
         return GDRIVER_ERR;
 
-    if (gdriver_init_ectx(&(sim_state.ectxs[sim_state.num_ectxs]), sim_state.num_ectxs,
+    if (gdriver_init_ectx(
+	&(sim_state.ectxs[sim_state.num_ectxs]), sim_state.num_ectxs,
         hfile, hh, ph, th,
         fill_pkt_cb, l2_img, l2_img_size,
         matching_ctx, matching_ctx_size)) {
@@ -322,10 +327,11 @@ int gdriver_add_ectx(const char *hfile, const char *hh, const char *ph, const ch
 
 int gdriver_run()
 {
-    if (sim_state.is_trace)
+    if (sim_state.is_trace) {
         gdriver_parse_trace();
-    else
+    } else {
         gdriver_generate_packets();
+    }
 
     if (pspinsim_run() == SPIN_SUCCESS) {
         return GDRIVER_OK;

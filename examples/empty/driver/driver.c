@@ -1,4 +1,4 @@
-// Copyright 2020 ETH Zurich
+// Copyright 2022 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,9 +28,10 @@ int main(int argc, char**argv)
     const char *hh="empty_hh";
     const char *ph="empty_ph";
     const char *th="empty_th";
+    int ectx_num;
 
-    gdriver_init(argc, argv);
-    gdriver_add_ectx(handlers_file, hh, ph, th, fill_packet, NULL, 42);
+    gdriver_init(argc, argv, NULL, &ectx_num);
+    gdriver_add_ectx(handlers_file, hh, ph, th, fill_packet, NULL, 0, NULL, 0);
 
     gdriver_run();
 

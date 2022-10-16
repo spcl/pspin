@@ -1,4 +1,4 @@
-// Copyright 2020 ETH Zurich
+// Copyright 2022 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 #include <stdio.h>
 
 #include "gdriver.h"
-
+#include "../handlers/synthetic.h"
 
 int match_ectx_cb(char *arg1, char *arg2)
 {
@@ -24,7 +24,7 @@ int match_ectx_cb(char *arg1, char *arg2)
     const char *ectx_match_addr = arg2;
 
     if (!strcmp(src_addr, ectx_match_addr)) {
-      printf("DEBUG: %s %s\n", src_addr, ectx_match_addr);
+	printf("DEBUG: %s %s\n", src_addr, ectx_match_addr);
         return 1;
     }
 
@@ -37,17 +37,25 @@ int main(int argc, char **argv)
     const char *hh = NULL;
     const char *ph = "synthetic_ph";
     const char *th = NULL;
-    const char *base_addr = "192.168.1.";
+    const char *base_addr = "192.168.0.";
     char matching_addr[GDRIVER_MATCHING_CTX_MAXSIZE];
-    int ectx_num;
+    benchmark_params_t params;
+    int ectx_num, ret;
+
+    params.loop_spin_count = 10;
+    params.dma_to_size = 64;
+    params.dma_to_count = 10;
+    params.dma_from_size = 64;
+    params.dma_from_count = 10;
 
     if (gdriver_init(argc, argv, match_ectx_cb, &ectx_num) != GDRIVER_OK)
         return EXIT_FAILURE;
 
     for (int ectx_id = 0; ectx_id < ectx_num; ectx_id++) {
         sprintf(matching_addr, "%s%u", base_addr, ectx_id);
-        printf("[SYNTHETIC BENCHMARK] ectx=%d match address: %s\n", ectx_id, matching_addr);
-        if (gdriver_add_ectx(handlers_file, hh, ph, th, NULL, NULL, 0, matching_addr, strlen(matching_addr) + 1) != GDRIVER_OK) {
+	ret = gdriver_add_ectx(handlers_file, hh, ph, th, NULL,
+	    (void *)&params, sizeof(params), matching_addr, strlen(matching_addr) + 1);
+	if (ret != GDRIVER_OK) {
             return EXIT_FAILURE;
         }
     }

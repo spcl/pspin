@@ -1,4 +1,4 @@
-// Copyright 2020 ETH Zurich
+// Copyright 2022 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -59,20 +59,22 @@ int main(int argc, char **argv)
     const char *hh = NULL;
     const char *ph = "filtering_ph";
     const char *th = NULL;
+    int ectx_num;
 
     srand(SEED);
 
     uint32_t *vec = (uint32_t *)malloc(sizeof(uint32_t) * (TOT_WORDS));
     fill_htable(vec, TOT_WORDS);
 
-    gdriver_init(argc, argv);
+    gdriver_init(argc, argv, NULL, &ectx_num);
     gdriver_add_ectx(handlers_file, hh, ph, th, fill_packet,
-        (void *)vec, sizeof(uint32_t) * (TOT_WORDS));
+        (void *)vec, sizeof(uint32_t) * (TOT_WORDS), NULL, 0);
 
     gdriver_run();
 
     gdriver_fini();
 
     free(vec);
+
     return 0;
 }
