@@ -1,4 +1,4 @@
-// Copyright 2020 ETH Zurich
+// Copyright 2022 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,13 +17,17 @@
 #define GDRIVER_OK 0
 #define GDRIVER_ERR 1
 
+#define GDRIVER_MATCHING_CTX_MAXSIZE 256
+
 #include <stdint.h>
 #include <stdlib.h>
 
 typedef uint32_t (*fill_packet_fun_t)(uint32_t, uint32_t, uint8_t*, uint32_t, uint32_t*);
+typedef int (*match_packet_fun_t)(char*, char*);
 
 int gdriver_add_ectx(const char *hfile, const char *hh, const char *ph, const char *th,
-    fill_packet_fun_t fill_cb, void *l2_img, size_t l2_img_size);
+    fill_packet_fun_t fill_cb, void *l2_img, size_t l2_img_size,
+    void *matching_ctx, size_t matching_ctx_size);
 int gdriver_run();
 int gdriver_fini();
-int gdriver_init(int argc, char **argv);
+int gdriver_init(int argc, char **argv, match_packet_fun_t matching_cb, int *ectx_num);

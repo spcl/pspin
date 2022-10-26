@@ -1,4 +1,4 @@
-// Copyright 2020 ETH Zurich
+// Copyright 2022 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,18 +38,20 @@ uint32_t fill_packet(uint32_t msg_idx, uint32_t pkt_idx, uint8_t *pkt_buff, uint
 
 int main(int argc, char**argv)
 {
-    const char *handlers_file="build/histogram_l1";
-    const char *hh=NULL;
-    const char *ph="histogram_l1_ph";
-    const char *th="histogram_l1_th";
+    const char *handlers_file = "build/histogram_l1";
+    const char *hh = NULL;
+    const char *ph = "histogram_l1_ph";
+    const char *th = "histogram_l1_th";
+    int ectx_num;
 
     srand(SEED);
 
-    gdriver_init(argc, argv);
-    gdriver_add_ectx(handlers_file, hh, ph, th, fill_packet, NULL, 42);
+    gdriver_init(argc, argv, NULL, &ectx_num);
+    gdriver_add_ectx(handlers_file, hh, ph, th, fill_packet, NULL, 0, NULL, 0);
 
     gdriver_run();
 
     gdriver_fini();
+
     return 0;
 }

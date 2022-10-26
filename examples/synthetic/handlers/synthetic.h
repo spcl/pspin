@@ -12,23 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stdint.h>
-#include "gdriver.h"
-
-int main(int argc, char**argv)
+typedef struct benchmark_params
 {
-    const char *handlers_file = "build/aggregate_global";
-    const char *hh = NULL;
-    const char *ph = "aggregate_global_ph";
-    const char *th = "aggregate_global_th";
-    int ectx_num;
+    /* Workload 1: Computations in handler */
+    int loop_spin_count;
 
-    gdriver_init(argc, argv, NULL, &ectx_num);
-    gdriver_add_ectx(handlers_file, hh, ph, th, NULL, NULL, 0, NULL, 0);
+    /* Workload 2: Write packet payload (DMA) to host */
+    uint32_t dma_to_size;
+    int dma_to_count;
 
-    gdriver_run();
-
-    gdriver_fini();
-
-    return 0;
-}
+    /* Workload 3: Read data (DMA) from host and send to the network */
+    uint32_t dma_from_size;
+    int dma_from_count;
+} benchmark_params_t;

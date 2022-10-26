@@ -1,4 +1,4 @@
-// Copyright 2020 ETH Zurich
+// Copyright 2022 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,11 +21,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <stdbool.h>
 #include <assert.h>
 #include <string.h>
 
 #define SLM_FILES "build/slm_files/"
+
+#define MAGIC_PATH "NULL"
 
 #define EC_MAX_NUM 2
 
@@ -51,24 +52,39 @@
             return res;                \
     }
 
-typedef struct gdriver_ectx
+typedef struct gdriver_ttrace
 {
-    spin_ec_t ectx;
-    fill_packet_fun_t pkt_fill_cb;
-} gdriver_ectx_t;
+    char *trace_path;
+    uint32_t packets_parsed;
+    match_packet_fun_t matching_cb;
+} gdriver_ttrace_t;
 
-typedef struct gdriver_sim_descr
+typedef struct gdriver_tgen
 {
-    gdriver_ectx_t ectxs[EC_MAX_NUM];
-    uint32_t num_ectxs;
-
     uint32_t num_messages;
     uint32_t num_packets;
     uint32_t packet_size;
     uint32_t packet_delay;
     uint32_t message_delay;
-
     uint32_t packets_sent;
+} gdriver_tgen_t;
+
+typedef struct gdriver_ectx
+{
+    spin_ec_t ectx;
+    fill_packet_fun_t pkt_fill_cb;
+    char matching_ctx[GDRIVER_MATCHING_CTX_MAXSIZE];
+} gdriver_ectx_t;
+
+typedef struct gdriver_sim_descr
+{
+    int num_ectxs;
+    gdriver_ectx_t ectxs[EC_MAX_NUM];
+
+    int is_trace;
+    gdriver_ttrace_t ttrace;
+    gdriver_tgen_t tgen;
+
     uint32_t packets_processed;
 } gdriver_sim_descr_t;
 
@@ -76,58 +92,65 @@ static gdriver_sim_descr_t sim_state;
 
 static void gdriver_dump_ectx_info(const gdriver_ectx_t *gectx)
 {
-    printf("gectx %p info:\n", gectx);
-    printf("hh_addr: %x; hh_size: %u;\n",
+    printf("[GDRIVER] gectx=%p info:\n", gectx);
+    printf("[GDRIVER] hh_addr=%x; hh_size=%u;\n",
         gectx->ectx.hh_addr, gectx->ectx.hh_size);
-    printf("ph_addr: %x; ph_size: %u;\n",
+    printf("[GDRIVER] ph_addr=%x; ph_size=%u;\n",
         gectx->ectx.ph_addr, gectx->ectx.ph_size);
-    printf("th_addr: %x; th_size: %u;\n",
+    printf("[GDRIVER] th_addr=%x; th_size=%u;\n",
         gectx->ectx.th_addr, gectx->ectx.th_size);
-    printf("handler_mem_addr: %x; handler_mem_size: %u\n",
+    printf("[GDRIVER] handler_mem_addr=%x; handler_mem_size=%u\n",
         gectx->ectx.handler_mem_addr, gectx->ectx.handler_mem_size);
-    printf("host_mem_addr: %lx; host_mem_size: %u\n",
+    printf("[GDRIVER] host_mem_addr=%lx; host_mem_size=%u\n",
         gectx->ectx.host_mem_addr, gectx->ectx.host_mem_size);
+    printf("[GDRIVER] matching context=%s\n", gectx->matching_ctx ? gectx->matching_ctx : "NULL");
+}
+
+static void gdriver_fill_pkt(int ectx_idx, uint32_t msg_idx, uint32_t pkt_idx,
+    uint8_t *pkt_buf, uint32_t pkt_size, uint32_t *l1_pkt_size)
+{
+    pkt_hdr_t *hdr;
+
+    if (sim_state.ectxs[ectx_idx].pkt_fill_cb != NULL) {
+	pkt_size = sim_state.ectxs[ectx_idx].pkt_fill_cb(
+	    msg_idx, pkt_idx, pkt_buf, sim_state.tgen.packet_size, l1_pkt_size);
+    } else {
+	// generate IP+UDP headers
+	hdr = (pkt_hdr_t*)pkt_buf;
+	hdr->ip_hdr.ihl = 5;
+	hdr->ip_hdr.length = pkt_size;
+	*l1_pkt_size = pkt_size;
+	// TODO: set other fields
+    }
 }
 
 static void gdriver_generate_packets()
 {
     uint32_t global_msg_counter = 0, global_packet_counter = 0;
     uint8_t *pkt_buf;
-    uint32_t pkt_size, l1_pkt_size, delay;
-    pkt_hdr_t *hdr;
-    bool is_last;
+    uint32_t pkt_size, l1_pkt_size, delay;    
+    int is_last;
 
-    pkt_buf = (uint8_t *)malloc(sizeof(uint8_t) * (sim_state.packet_size));
+    printf("[GDRIVER]: Using default packet generator\n");
+
+    pkt_buf = (uint8_t *)malloc(sizeof(uint8_t) * (sim_state.tgen.packet_size));
     assert(pkt_buf != NULL);
 
-    for (uint32_t ectx_idx = 0; ectx_idx < sim_state.num_ectxs; ectx_idx++) {
-        for (uint32_t msg_idx = 0; msg_idx < sim_state.num_messages; msg_idx++) {
-            for (uint32_t pkt_idx = 0; pkt_idx < sim_state.num_packets; pkt_idx++) {
-                pkt_size = sim_state.packet_size;
-                l1_pkt_size = pkt_size;
+    for (int ectx_idx = 0; ectx_idx < sim_state.num_ectxs; ectx_idx++) {
+        for (uint32_t msg_idx = 0; msg_idx < sim_state.tgen.num_messages; msg_idx++) {
+            for (uint32_t pkt_idx = 0; pkt_idx < sim_state.tgen.num_packets; pkt_idx++) {
+                pkt_size = sim_state.tgen.packet_size;
 
-                if (sim_state.ectxs[ectx_idx].pkt_fill_cb != NULL) {
-                    pkt_size = sim_state.ectxs[ectx_idx].pkt_fill_cb(
-                        global_msg_counter + msg_idx, global_packet_counter + pkt_idx,
-                        pkt_buf, sim_state.packet_size, &l1_pkt_size);
-                } else {
-                    // generate IP+UDP headers
-                    hdr = (pkt_hdr_t*)pkt_buf;
-                    hdr->ip_hdr.ihl = 5;
-                    hdr->ip_hdr.length = pkt_size;
-                    // TODO: set other fields
-                }
+		gdriver_fill_pkt(ectx_idx, global_msg_counter + msg_idx, global_packet_counter + pkt_idx,
+		    pkt_buf, pkt_size, &l1_pkt_size);                
+                is_last = (pkt_idx + 1 == sim_state.tgen.num_packets);
+                delay = (is_last) ? sim_state.tgen.message_delay : sim_state.tgen.packet_delay;
 
-                is_last = (pkt_idx + 1 == sim_state.num_packets);
-                delay = (is_last) ? sim_state.message_delay : sim_state.packet_delay;
-
-                pspinsim_packet_add(
-                    &(sim_state.ectxs[ectx_idx].ectx), global_msg_counter + msg_idx,
+                pspinsim_packet_add(&(sim_state.ectxs[ectx_idx].ectx), global_msg_counter + msg_idx,
                     pkt_buf, pkt_size, l1_pkt_size, is_last, delay, 0);
 
+		sim_state.tgen.packets_sent++;
                 global_packet_counter++;
-
-                sim_state.packets_sent++;
             }
             global_msg_counter++;
         }
@@ -136,6 +159,66 @@ static void gdriver_generate_packets()
     pspinsim_packet_eos();
 
     free(pkt_buf);
+}
+
+static void gdriver_parse_trace()
+{
+    uint32_t nsources, npackets, max_pkt_size;
+    uint32_t msgid, pkt_size, ipg, wait_cycles, l1_pkt_size;
+    char src_addr[GDRIVER_MATCHING_CTX_MAXSIZE];
+    char dst_addr[GDRIVER_MATCHING_CTX_MAXSIZE];
+    uint8_t *pkt_buf;
+    int is_last, matched, ret, ectx_id;
+
+    FILE *trace_file = fopen(sim_state.ttrace.trace_path, "r");
+    assert(trace_file);
+    printf("[GDRIVER]: Packet trace path: %s\n", sim_state.ttrace.trace_path);
+
+    /* Parse trace header */
+    ret = fscanf(trace_file, "%u %u %u\n", &nsources, &npackets, &max_pkt_size);
+    assert(nsources > 0 && nsources <= sim_state.num_ectxs);
+    assert(npackets > 0);
+
+    pkt_buf = (uint8_t *)malloc(sizeof(uint8_t) * max_pkt_size);
+    assert(pkt_buf != NULL);
+
+    sim_state.ttrace.packets_parsed = 0;
+    wait_cycles = 0;
+    while (!feof(trace_file)) {
+        ret = fscanf(trace_file, "%s %s %u %u %u %u\n", src_addr, dst_addr, &pkt_size, &ipg, &msgid, &is_last);
+        assert(ret == 6);
+        printf("%s %s %u %u %u %u\n", src_addr, dst_addr, pkt_size, ipg, msgid, is_last);
+
+        if (pkt_size == 0) {
+            assert(wait_cycles == 0);
+            assert(ipg > 0);
+            wait_cycles = ipg;
+        } else {
+            assert(ipg == 0);
+            matched = 0;
+            for (ectx_id = 0; ectx_id < sim_state.num_ectxs; ectx_id++) {
+                if (sim_state.ttrace.matching_cb(src_addr, sim_state.ectxs[ectx_id].matching_ctx)) {
+                    matched = 1;
+                    break;
+                }
+            }
+            assert(matched);
+
+	    gdriver_fill_pkt(ectx_id, msgid, 0, pkt_buf, pkt_size, &l1_pkt_size);
+	    pspinsim_packet_add(&(sim_state.ectxs[ectx_id].ectx), msgid,
+		pkt_buf, pkt_size, l1_pkt_size, is_last, wait_cycles, 0);
+
+	    wait_cycles = 0;
+        }
+        sim_state.ttrace.packets_parsed++;
+    }
+
+    assert(sim_state.ttrace.packets_parsed == npackets);
+
+    fclose(trace_file);
+    free(pkt_buf);
+
+    pspinsim_packet_eos();
 }
 
 static void gdriver_pcie_mst_write_complete(void *user_ptr)
@@ -152,7 +235,8 @@ static void gdriver_feedback(uint64_t user_ptr, uint64_t nic_arrival_time,
 static int gdriver_init_ectx(gdriver_ectx_t *gectx, uint32_t gectx_id,
     const char *handlers_exe, const char *hh_name,
     const char *ph_name, const char *th_name,
-    fill_packet_fun_t fill_cb, void *l2_img, size_t l2_img_size)
+    fill_packet_fun_t fill_cb, void *l2_img, size_t l2_img_size,
+    void *matching_ctx, size_t matching_ctx_size)
 {
     spin_nic_addr_t hh_addr = 0, ph_addr = 0, th_addr = 0;
     size_t hh_size = 0, ph_size = 0, th_size = 0;
@@ -180,7 +264,7 @@ static int gdriver_init_ectx(gdriver_ectx_t *gectx, uint32_t gectx_id,
      * For now assume that each execution context had its own region of host/L1/L2
      * memories.
      *
-     * See macro on top for clarity.
+     * See EC_MEM_BASE_ADDR macro definition for clarity.
      */
 
     gectx->ectx.handler_mem_addr = EC_MEM_BASE_ADDR(gectx_id,
@@ -208,22 +292,31 @@ static int gdriver_init_ectx(gdriver_ectx_t *gectx, uint32_t gectx_id,
             (void *)l2_img, l2_img_size, (void *)0);
     }
 
+    if (matching_ctx)
+        strcpy(gectx->matching_ctx, matching_ctx);
+
     gdriver_dump_ectx_info(gectx);
 
     return GDRIVER_OK;
 }
 
 int gdriver_add_ectx(const char *hfile, const char *hh, const char *ph, const char *th,
-    fill_packet_fun_t fill_pkt_cb, void *l2_img, size_t l2_img_size)
+     fill_packet_fun_t fill_pkt_cb, void *l2_img, size_t l2_img_size,
+     void *matching_ctx, size_t matching_ctx_size)
 {
     int ret;
 
     if (sim_state.num_ectxs == EC_MAX_NUM)
         return GDRIVER_ERR;
 
-    if (gdriver_init_ectx(&(sim_state.ectxs[sim_state.num_ectxs]),
-        sim_state.num_ectxs, hfile, hh, ph, th,
-        fill_pkt_cb, l2_img, l2_img_size)) {
+    if (matching_ctx_size > GDRIVER_MATCHING_CTX_MAXSIZE)
+        return GDRIVER_ERR;
+
+    if (gdriver_init_ectx(
+	&(sim_state.ectxs[sim_state.num_ectxs]), sim_state.num_ectxs,
+        hfile, hh, ph, th,
+        fill_pkt_cb, l2_img, l2_img_size,
+        matching_ctx, matching_ctx_size)) {
         return GDRIVER_ERR;
     }
 
@@ -234,7 +327,11 @@ int gdriver_add_ectx(const char *hfile, const char *hh, const char *ph, const ch
 
 int gdriver_run()
 {
-    gdriver_generate_packets();
+    if (sim_state.is_trace) {
+        gdriver_parse_trace();
+    } else {
+        gdriver_generate_packets();
+    }
 
     if (pspinsim_run() == SPIN_SUCCESS) {
         return GDRIVER_OK;
@@ -245,16 +342,24 @@ int gdriver_run()
 
 int gdriver_fini()
 {
-    if (pspinsim_fini() == SPIN_SUCCESS)
-        return sim_state.packets_sent == sim_state.packets_processed;
+    if (pspinsim_fini() != SPIN_SUCCESS)
+        return GDRIVER_ERR;
 
-    return GDRIVER_ERR;
+    if (sim_state.is_trace && sim_state.ttrace.packets_parsed != sim_state.packets_processed)
+        return GDRIVER_ERR;
+
+    else if (sim_state.tgen.packets_sent != sim_state.packets_processed)
+        return GDRIVER_ERR;
+
+    return GDRIVER_OK;
 }
 
-int gdriver_init(int argc, char **argv)
+int gdriver_init(int argc, char **argv, match_packet_fun_t matching_cb, int *ectx_num)
 {
     struct gengetopt_args_info ai;
     pspin_conf_t conf;
+
+    *ectx_num = -1;
 
     if (cmdline_parser(argc, argv, &ai) != 0)
         return GDRIVER_ERR;
@@ -269,11 +374,19 @@ int gdriver_init(int argc, char **argv)
 
     memset(&sim_state, 0, sizeof(sim_state));
 
-    sim_state.num_messages = ai.num_messages_arg;
-    sim_state.num_packets = ai.num_packets_arg;
-    sim_state.packet_size = ai.packet_size_arg;
-    sim_state.packet_delay = ai.packet_delay_arg;
-    sim_state.message_delay = ai.message_delay_arg;
+    if (strcmp(ai.trace_file_arg, MAGIC_PATH)) {
+        sim_state.is_trace = 1;
+        sim_state.ttrace.trace_path = ai.trace_file_arg;
+        sim_state.ttrace.matching_cb = matching_cb;
+    } else {
+        sim_state.tgen.num_messages = ai.num_messages_arg;
+        sim_state.tgen.num_packets = ai.num_packets_arg;
+        sim_state.tgen.packet_size = ai.packet_size_arg;
+        sim_state.tgen.packet_delay = ai.packet_delay_arg;
+        sim_state.tgen.message_delay = ai.message_delay_arg;
+    }
+
+    *ectx_num = EC_MAX_NUM;
 
     return GDRIVER_OK;
 }
