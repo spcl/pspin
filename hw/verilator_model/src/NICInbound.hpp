@@ -386,13 +386,13 @@ namespace PsPIN
         // Progress HERs
         void her_progress_posedge()
         {
-            if (her_cmd_wait)
-            {
+	    *ni_ctrl.her_valid_o = 0;
+
+	    if (!(*ni_ctrl.her_ready_i))
+	    {
                 ni_ctrl_stalls++;
                 return;
             }
-
-            *ni_ctrl.her_valid_o = 0;
 
             if (ready_hers.empty())
             {
@@ -454,11 +454,7 @@ namespace PsPIN
 
         void her_progress_negedge()
         {
-            her_cmd_wait = false;
-            if (*ni_ctrl.her_valid_o && !(*ni_ctrl.her_ready_i))
-            {
-                her_cmd_wait = true;
-            }
+	    /* Nothing to do here yet */
         }
 
         // Get feedback
