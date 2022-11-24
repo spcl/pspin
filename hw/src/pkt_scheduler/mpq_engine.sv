@@ -482,7 +482,19 @@ module mpq_fsm #(
         endcase
     end
 
-    assign mpq_o.eom_seen = mpq_q.eom_seen || (her_new_i && her_new_is_eom_i);
+    always_comb begin
+        mpq_o.eom_seen = mpq_q.eom_seen;
+
+        // set it if we see the EOM
+        if (her_new_i && her_new_is_eom_i) begin
+            mpq_o.eom_seen = 1;
+        end
+
+        // clear it if we are transitioning to Free state
+        if (mpq_o.state == Free) begin
+            mpq_o.eom_seen = 0;
+        end
+    end
 
     //update state
     always_comb begin //H-P-C case
