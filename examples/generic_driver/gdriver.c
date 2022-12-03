@@ -112,15 +112,15 @@ static void gdriver_fill_pkt(int ectx_idx, uint32_t msg_idx, uint32_t pkt_idx,
     pkt_hdr_t *hdr;
 
     if (sim_state.ectxs[ectx_idx].pkt_fill_cb != NULL) {
-	pkt_size = sim_state.ectxs[ectx_idx].pkt_fill_cb(
-	    msg_idx, pkt_idx, pkt_buf, sim_state.tgen.packet_size, l1_pkt_size);
+        pkt_size = sim_state.ectxs[ectx_idx].pkt_fill_cb(
+        msg_idx, pkt_idx, pkt_buf, sim_state.tgen.packet_size, l1_pkt_size);
     } else {
-	// generate IP+UDP headers
-	hdr = (pkt_hdr_t*)pkt_buf;
-	hdr->ip_hdr.ihl = 5;
-	hdr->ip_hdr.length = pkt_size;
-	*l1_pkt_size = pkt_size;
-	// TODO: set other fields
+        // generate IP+UDP headers
+        hdr = (pkt_hdr_t*)pkt_buf;
+        hdr->ip_hdr.ihl = 5;
+        hdr->ip_hdr.length = pkt_size;
+        *l1_pkt_size = pkt_size;
+        // TODO: set other fields
     }
 }
 
@@ -128,7 +128,7 @@ static void gdriver_generate_packets()
 {
     uint32_t global_msg_counter = 0, global_packet_counter = 0;
     uint8_t *pkt_buf;
-    uint32_t pkt_size, l1_pkt_size, delay;    
+    uint32_t pkt_size, l1_pkt_size, delay;
     int is_last;
 
     printf("[GDRIVER]: Using default packet generator\n");
@@ -141,15 +141,15 @@ static void gdriver_generate_packets()
             for (uint32_t pkt_idx = 0; pkt_idx < sim_state.tgen.num_packets; pkt_idx++) {
                 pkt_size = sim_state.tgen.packet_size;
 
-		gdriver_fill_pkt(ectx_idx, global_msg_counter + msg_idx, global_packet_counter + pkt_idx,
-		    pkt_buf, pkt_size, &l1_pkt_size);                
+                gdriver_fill_pkt(ectx_idx, ectx_idx, global_packet_counter + pkt_idx,
+                    pkt_buf, pkt_size, &l1_pkt_size);
                 is_last = (pkt_idx + 1 == sim_state.tgen.num_packets);
                 delay = (is_last) ? sim_state.tgen.message_delay : sim_state.tgen.packet_delay;
 
-                pspinsim_packet_add(&(sim_state.ectxs[ectx_idx].ectx), global_msg_counter + msg_idx,
+                pspinsim_packet_add(&(sim_state.ectxs[ectx_idx].ectx), ectx_idx,
                     pkt_buf, pkt_size, l1_pkt_size, is_last, delay, 0);
 
-		sim_state.tgen.packets_sent++;
+                sim_state.tgen.packets_sent++;
                 global_packet_counter++;
             }
             global_msg_counter++;
@@ -164,7 +164,8 @@ static void gdriver_generate_packets()
 static void gdriver_parse_trace()
 {
     uint32_t nsources, npackets, max_pkt_size;
-    uint32_t msgid, pkt_size, ipg, wait_cycles, l1_pkt_size;
+    uint32_t msgid, pkt_id, hpu, dmaw, dmar, outbound;
+    uint32_t pkt_size, ipg, wait_cycles, l1_pkt_size;
     char src_addr[GDRIVER_MATCHING_CTX_MAXSIZE];
     char dst_addr[GDRIVER_MATCHING_CTX_MAXSIZE];
     uint8_t *pkt_buf;
@@ -179,37 +180,50 @@ static void gdriver_parse_trace()
     assert(nsources > 0 && nsources <= sim_state.num_ectxs);
     assert(npackets > 0);
 
+    /* TODO: remove me from traces */
+    for (int i = 0; i < nsources; i++)
+        fscanf(trace_file, "%s %u %u %u %u %u\n",
+            src_addr, &pkt_size, &msgid, &hpu, &dmaw, &dmar);
+
     pkt_buf = (uint8_t *)malloc(sizeof(uint8_t) * max_pkt_size);
     assert(pkt_buf != NULL);
 
     sim_state.ttrace.packets_parsed = 0;
     wait_cycles = 0;
     while (!feof(trace_file)) {
-        ret = fscanf(trace_file, "%s %s %u %u %u %u\n", src_addr, dst_addr, &pkt_size, &ipg, &msgid, &is_last);
-        assert(ret == 6);
-        printf("%s %s %u %u %u %u\n", src_addr, dst_addr, pkt_size, ipg, msgid, is_last);
+        ret = fscanf(trace_file, "%s %s %u %u %u %d %u %u %u %u\n",
+            src_addr, dst_addr, &pkt_size, &msgid, &pkt_id,
+            &is_last, &hpu, &dmaw, &dmar, &outbound);
+        assert(ret == 10);
 
-        if (pkt_size == 0) {
-            assert(wait_cycles == 0);
-            assert(ipg > 0);
-            wait_cycles = ipg;
-        } else {
-            assert(ipg == 0);
-            matched = 0;
-            for (ectx_id = 0; ectx_id < sim_state.num_ectxs; ectx_id++) {
-                if (sim_state.ttrace.matching_cb(src_addr, sim_state.ectxs[ectx_id].matching_ctx)) {
-                    matched = 1;
-                    break;
-                }
+        /* FIXME: here we stupidly assume that we can mask FMQs bits */
+        msgid = msgid & 1111;
+
+        printf("%s %s %u %u %d %u\n", src_addr, dst_addr, pkt_size, msgid, is_last, hpu);
+
+        /* FIXME: we'll probably will not have IPGs */
+        //if (pkt_size == 0) {
+        //    assert(wait_cycles == 0);
+        //    assert(ipg > 0);
+        //    wait_cycles = ipg;
+        //} else {
+        //    assert(ipg == 0);
+
+        matched = 0;
+        for (ectx_id = 0; ectx_id < sim_state.num_ectxs; ectx_id++) {
+            if (sim_state.ttrace.matching_cb(
+                src_addr, sim_state.ectxs[ectx_id].matching_ctx)) {
+                matched = 1;
+                break;
             }
-            assert(matched);
-
-	    gdriver_fill_pkt(ectx_id, msgid, 0, pkt_buf, pkt_size, &l1_pkt_size);
-	    pspinsim_packet_add(&(sim_state.ectxs[ectx_id].ectx), msgid,
-		pkt_buf, pkt_size, l1_pkt_size, is_last, wait_cycles, 0);
-
-	    wait_cycles = 0;
         }
+
+        assert(matched);
+
+        gdriver_fill_pkt(ectx_id, msgid, 0, pkt_buf, pkt_size, &l1_pkt_size);
+        pspinsim_packet_add(&(sim_state.ectxs[ectx_id].ectx), msgid,
+            pkt_buf, pkt_size, l1_pkt_size, is_last, wait_cycles, 0);
+
         sim_state.ttrace.packets_parsed++;
     }
 
@@ -313,7 +327,7 @@ int gdriver_add_ectx(const char *hfile, const char *hh, const char *ph, const ch
         return GDRIVER_ERR;
 
     if (gdriver_init_ectx(
-	&(sim_state.ectxs[sim_state.num_ectxs]), sim_state.num_ectxs,
+        &(sim_state.ectxs[sim_state.num_ectxs]), sim_state.num_ectxs,
         hfile, hh, ph, th,
         fill_pkt_cb, l2_img, l2_img_size,
         matching_ctx, matching_ctx_size)) {
