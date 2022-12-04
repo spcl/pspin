@@ -22,7 +22,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-typedef uint32_t (*fill_packet_fun_t)(uint32_t, uint32_t, uint8_t*, uint32_t, uint32_t*);
+typedef uint32_t (*fill_packet_fun_t)(uint32_t, void*, uint8_t*, uint32_t, uint32_t*);
 typedef int (*match_packet_fun_t)(char*, char*);
 
 int gdriver_add_ectx(const char *hfile, const char *hh, const char *ph, const char *th,

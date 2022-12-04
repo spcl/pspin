@@ -106,14 +106,14 @@ static void gdriver_dump_ectx_info(const gdriver_ectx_t *gectx)
     printf("[GDRIVER] matching context=%s\n", gectx->matching_ctx ? gectx->matching_ctx : "NULL");
 }
 
-static void gdriver_fill_pkt(int ectx_idx, uint32_t msg_idx, uint32_t pkt_idx,
+static void gdriver_fill_pkt(int ectx_idx, uint32_t msg_idx, void *data,
     uint8_t *pkt_buf, uint32_t pkt_size, uint32_t *l1_pkt_size)
 {
     pkt_hdr_t *hdr;
 
     if (sim_state.ectxs[ectx_idx].pkt_fill_cb != NULL) {
         pkt_size = sim_state.ectxs[ectx_idx].pkt_fill_cb(
-        msg_idx, pkt_idx, pkt_buf, sim_state.tgen.packet_size, l1_pkt_size);
+            msg_idx, data, pkt_buf, pkt_size, l1_pkt_size);
     } else {
         // generate IP+UDP headers
         hdr = (pkt_hdr_t*)pkt_buf;
@@ -141,7 +141,7 @@ static void gdriver_generate_packets()
             for (uint32_t pkt_idx = 0; pkt_idx < sim_state.tgen.num_packets; pkt_idx++) {
                 pkt_size = sim_state.tgen.packet_size;
 
-                gdriver_fill_pkt(ectx_idx, ectx_idx, global_packet_counter + pkt_idx,
+                gdriver_fill_pkt(ectx_idx, ectx_idx, (void *)&pkt_idx,
                     pkt_buf, pkt_size, &l1_pkt_size);
                 is_last = (pkt_idx + 1 == sim_state.tgen.num_packets);
                 delay = (is_last) ? sim_state.tgen.message_delay : sim_state.tgen.packet_delay;
@@ -191,6 +191,7 @@ static void gdriver_parse_trace()
     sim_state.ttrace.packets_parsed = 0;
     wait_cycles = 0;
     while (!feof(trace_file)) {
+        /* TODO/FIXME: for now dmaw/dmar/outbound are useless */
         ret = fscanf(trace_file, "%s %s %u %u %u %d %u %u %u %u\n",
             src_addr, dst_addr, &pkt_size, &msgid, &pkt_id,
             &is_last, &hpu, &dmaw, &dmar, &outbound);
@@ -220,9 +221,9 @@ static void gdriver_parse_trace()
 
         assert(matched);
 
-        gdriver_fill_pkt(ectx_id, msgid, 0, pkt_buf, pkt_size, &l1_pkt_size);
+        gdriver_fill_pkt(ectx_id, msgid, (void *)&hpu, pkt_buf, pkt_size, &l1_pkt_size);
         pspinsim_packet_add(&(sim_state.ectxs[ectx_id].ectx), msgid,
-            pkt_buf, pkt_size, l1_pkt_size, is_last, wait_cycles, 0);
+            pkt_buf, pkt_size, l1_pkt_size, is_last, wait_cycles, ectx_id);
 
         sim_state.ttrace.packets_parsed++;
     }
@@ -240,9 +241,23 @@ static void gdriver_pcie_mst_write_complete(void *user_ptr)
     printf("Write to NIC memory completed (user_ptr: %p)\n", user_ptr);
 }
 
-static void gdriver_feedback(uint64_t user_ptr, uint64_t nic_arrival_time,
-    uint64_t pspin_arrival_time, uint64_t feedback_time)
+static void gdriver_feedback(uint64_t user_ptr, uint64_t her_addr,
+    uint64_t nic_arrival_time, uint64_t pspin_arrival_time, uint64_t feedback_time)
 {
+    if (sim_state.ttrace.matching_cb) {
+        printf("[BMARK]: "
+               "ectx=%u "
+               "her=0x%x "
+               "nic_arrival_time=%lu "
+               "pspin_arrival_time=%lu "
+               "feedback_time=%lu\n",
+               (uint32_t)user_ptr + 1,
+               (uint32_t)her_addr,
+               nic_arrival_time,
+               pspin_arrival_time,
+               feedback_time);
+    }
+
     sim_state.packets_processed++;
 }
 
@@ -398,6 +413,7 @@ int gdriver_init(int argc, char **argv, match_packet_fun_t matching_cb, int *ect
         sim_state.tgen.packet_size = ai.packet_size_arg;
         sim_state.tgen.packet_delay = ai.packet_delay_arg;
         sim_state.tgen.message_delay = ai.message_delay_arg;
+        sim_state.ttrace.matching_cb = NULL;
     }
 
     *ectx_num = EC_MAX_NUM;

@@ -1,11 +1,11 @@
 // Copyright 2020 ETH Zurich
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,8 +18,8 @@
 #include "spin.h"
 
 #ifdef __cplusplus
-extern "C" {  
-#endif  
+extern "C" {
+#endif
 
 typedef struct ni_conf
 {
@@ -56,7 +56,7 @@ typedef struct pspin_conf {
 } pspin_conf_t;
 
 typedef void (*pkt_out_cb_t)(uint8_t*, size_t);
-typedef void (*pkt_feedback_cb_t)(uint64_t, uint64_t, uint64_t, uint64_t);
+typedef void (*pkt_feedback_cb_t)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 typedef void (*pcie_slv_write_cb_t)(uint64_t, uint8_t*, size_t);
 typedef void (*pcie_slv_read_cb_t)(uint64_t, uint8_t*, size_t);
 typedef void (*pcie_mst_write_cb_t)(void*);
@@ -80,8 +80,8 @@ int pspinsim_cb_set_pcie_mst_write_completion(pcie_mst_write_cb_t cb);
 int pspinsim_cb_set_pcie_mst_read_completion(pcie_mst_read_cb_t cb);
 int pspinsim_cb_set_pkt_feedback(pkt_feedback_cb_t cb);
 
-#ifdef __cplusplus  
-} // extern "C"  
+#ifdef __cplusplus
+} // extern "C"
 #endif
 
 #endif /* __PSPINSIM_H__ */

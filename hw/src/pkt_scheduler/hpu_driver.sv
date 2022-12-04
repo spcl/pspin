@@ -30,7 +30,7 @@ module hpu_driver #(
 
     //task in
     input  logic                  hpu_task_valid_i,
-    output logic                  hpu_task_ready_o, 
+    output logic                  hpu_task_ready_o,
     input  hpu_handler_task_t     hpu_task_i,
 
     //feedback out
@@ -200,7 +200,7 @@ module task_frontend #(
 
     //task in
     input  logic                  hpu_task_valid_i,
-    output logic                  hpu_task_ready_o, 
+    output logic                  hpu_task_ready_o,
     input  hpu_handler_task_t     hpu_task_i,
 
     //feedback out
@@ -276,7 +276,7 @@ module task_frontend #(
         .push_i    (feedback_buff_push),
         .data_o    (hpu_feedback_o),
         .pop_i     (hpu_feedback_ready_i && hpu_feedback_valid_o)
-    ); 
+    );
 
     assign feedback_buff_push = !feedback_buff_full && (trigger_feedback || state_q==SendingFeedback);
     assign disable_commands_o = !feedback_buff_empty;
@@ -327,7 +327,7 @@ module task_frontend #(
     assign pmp_addr_d[1][31:24] = l1_base_addr[31:24];
     assign pmp_addr_d[1][23:0] = 24'h7F_FFFF;
 
-    // PMP: peripherals 
+    // PMP: peripherals
     assign pmp_cfg_d[2] = 8'b0_00_11_0_1_1;
     assign pmp_addr_d[2] = 32'h1b7F_FFFF;
 
@@ -354,7 +354,7 @@ module task_frontend #(
     // PMP: stdout virtual device
     assign pmp_cfg_d[7] = 8'b0_00_11_0_1_0;
     assign pmp_addr_d[7][31:0] = 32'h1a10_7fff;
- 
+
     // PMP: beginning of L2 handler memory (for, e.g., .rodata)
     assign pmp_cfg_d[8] = 8'b0_00_11_0_1_1;
     assign pmp_addr_d[8][31:0] = 32'h1c00_7fff;
@@ -385,9 +385,9 @@ module task_frontend #(
                     state_d = (hpu_task_i.handler_task.handler_fun == '0) ? SendingFeedback : Running;
                     current_task_d = hpu_task_i;
                 end
-            end 
+            end
 
-            Running: begin 
+            Running: begin
                 if (trigger_feedback) begin
                     state_d = (feedback_buff_full) ? SendingFeedback : Idle;
                 end
@@ -399,15 +399,15 @@ module task_frontend #(
                 end
             end
 
-            default: begin 
+            default: begin
                 state_d = Idle;
             end
 
         endcase
     end
-        
-    always_comb begin   
-        gnt_o = 1'b0;    
+
+    always_comb begin
+        gnt_o = 1'b0;
         trigger_feedback = 1'b0;
         rdata_d = rdata_q;
         valid_d = 1'b0;
@@ -415,14 +415,14 @@ module task_frontend #(
         handler_error = 1'b0;
 
         if (state_q == Running && req_i) begin
-            gnt_o = 1'b1;     
+            gnt_o = 1'b1;
             valid_d = 1'b1;
-            
-            case (add_i[7:0]) 
+
+            case (add_i[7:0])
 
                 /* Task info */
                 8'h00: begin //handler function
-                    rdata_d = current_task_q.handler_task.handler_fun; 
+                    rdata_d = current_task_q.handler_task.handler_fun;
                 end
                 8'h04: begin //handler function size (not needed?)
                     rdata_d = current_task_q.handler_task.handler_fun_size;
@@ -430,7 +430,7 @@ module task_frontend #(
                 8'h08: begin //handler memory address (L2)
                     rdata_d = current_task_q.handler_task.handler_mem_addr;
                 end
-                8'h0c: begin //handler memory size 
+                8'h0c: begin //handler memory size
                     rdata_d = current_task_q.handler_task.handler_mem_size;
                 end
                 8'h10: begin  //L1 packet address
@@ -450,7 +450,7 @@ module task_frontend #(
                 end
                 8'h24: begin //scratchpad address 3
                     rdata_d = l1_scratchpad_addr[3];
-                end                
+                end
                 8'h28: begin //scratchpad size 0
                     rdata_d = current_task_q.handler_task.scratchpad_size[0];
                 end
@@ -499,10 +499,10 @@ module task_frontend #(
             endcase
         end
     end
-    
+
     always_ff @(posedge clk_i, negedge rst_ni) begin
         if (~rst_ni) begin
-            state_q <= Init; 
+            state_q <= Init;
             current_task_q <= '0; //how to initialize this?
             valid_q <= 1'b0;
             rdata_q <= '0;
@@ -517,8 +517,8 @@ module task_frontend #(
             pmp_addr_q <= pmp_addr_d;
         end
     end
-    
-    
+
+
     // pragma translate_off
     `ifndef VERILATOR
     initial begin
@@ -532,7 +532,7 @@ module task_frontend #(
             end
         end
          */
-        forever begin            
+        forever begin
             @(posedge clk_i);
             if (hpu_task_valid_i && hpu_task_ready_o) begin
                 handler_start_time = $stime;
@@ -541,7 +541,7 @@ module task_frontend #(
 
             if (state_q != Init && state_q != Idle && state_d == Idle) begin
                 timediff = $stime - handler_start_time;
-                $display("%0d INFO HPU_TIME %0d %0d %0d", $stime, cluster_id_i, C_CORE_ID, timediff);                  
+                $display("%0d INFO HPU_TIME %0d %0d %0d", $stime, cluster_id_i, C_CORE_ID, timediff);
             end
 
             if (state_q == Running && trigger_feedback) begin
@@ -558,11 +558,12 @@ module task_frontend #(
     `else
         always_ff @(posedge clk_i, negedge rst_ni) begin
             if (hpu_task_valid_i && hpu_task_ready_o) begin
-                $display("[%0d][synt]: INFO HANDLER_START %0d %0d", $stime, cluster_id_i, C_CORE_ID);
+                //$display("%0d INFO HANDLER_START %0d %0d", $stime, cluster_id_i, C_CORE_ID);
+                $display("[BMARK]: her=0x%08x t_handler_start=%0d", hpu_task_i.handler_task.pkt_addr, $stime);
             end
 
             if (state_q != Init && state_q != Idle && state_d == Idle) begin
-                $display("[%0d][synt]: INFO HPU_TIME %0d %0d", $stime, cluster_id_i, C_CORE_ID);                  
+                $display("[%0d][synt]: INFO HPU_TIME %0d %0d", $stime, cluster_id_i, C_CORE_ID);
             end
 
             if (state_q == Running && trigger_feedback) begin
@@ -608,7 +609,7 @@ module cmd_frontend #(
     output logic                  cmd_valid_o,
     output pspin_cmd_t            cmd_o
 );
-    
+
     localparam int unsigned ADD_ISSUE = 0;
     localparam int unsigned ADD_WAIT = 1;
     localparam int unsigned ADD_TEST = 2;
@@ -630,7 +631,7 @@ module cmd_frontend #(
     logic rvalid_d, rvalid_q;
     logic [31:0] rdata_d, rdata_q;
 
-    //current command 
+    //current command
     pspin_cmd_t cmd_d, cmd_q;
     logic cmd_buff_push;
     logic cmd_buff_empty, cmd_buff_full;
@@ -692,7 +693,7 @@ module cmd_frontend #(
         .push_i    (cmd_buff_push),
         .data_o    (cmd_o),
         .pop_i     (cmd_ready_i && cmd_valid_o)
-    ); 
+    );
 
     assign r_rdata_o = rdata_q;
     assign r_valid_o = rvalid_q;
@@ -707,7 +708,7 @@ module cmd_frontend #(
         state_d = state_q;
         assign_id = 1'b0;
 
-        case (state_q) 
+        case (state_q)
             Ready: begin
                 if (cmd_issued) begin
                     assign_id = 1'b1;
@@ -722,14 +723,14 @@ module cmd_frontend #(
                     else if (cmd_buff_full) begin
                         state_d = WaitingBuffer;
                     end
-                end 
+                end
 
-                //if the core wants to wait (1) and 
+                //if the core wants to wait (1) and
                 //the commands is actually marked as in-flight (2) and
                 //the current completed command notification (if any) is not for the command the core wants to wait (3)
                 if (wait_issued && !wt_cmd_finished) begin
-                    state_d = Waiting; 
-                end                
+                    state_d = Waiting;
+                end
             end
 
             Disabled: begin
@@ -741,7 +742,7 @@ module cmd_frontend #(
                     end
                     else if (cmd_buff_full) begin
                         state_d = WaitingBuffer;
-                    end 
+                    end
                     else begin
                         state_d = Ready;
                     end
@@ -799,7 +800,7 @@ module cmd_frontend #(
         if (req_i && state_q==Ready) begin
             if (add_idx == 3 && ~wen_ni) begin //command definition (type and flags)
                 //command type (1:1); generate event flag (0:0)
-                case (wdata_i[2:1]) 
+                case (wdata_i[2:1])
                     2'b00: begin
                         cmd_d.cmd_type = HostMemCpy;
                         cmd_d.intf_id  = CMD_EDMA_ID;
@@ -810,15 +811,15 @@ module cmd_frontend #(
                     end
                     2'b10: begin
                         cmd_d.cmd_type = HostDirect;
-                        cmd_d.intf_id  = CMD_HOSTDIRECT_ID;             
+                        cmd_d.intf_id  = CMD_HOSTDIRECT_ID;
                     end
                 endcase
 
                 cmd_d.generate_event = wdata_i[0:0];
-             end 
-            
+             end
+
             else if (add_idx >= 4 && add_idx <= 10 && ~wen_ni) begin //command definition (words)
-                cmd_d.descr.words[add_idx - 4] = wdata_i; 
+                cmd_d.descr.words[add_idx - 4] = wdata_i;
             end
         end
     end
@@ -827,7 +828,7 @@ module cmd_frontend #(
     always_comb begin
         cmd_d.cmd_id.local_cmd_id = cmd_q.cmd_id.local_cmd_id;
 
-        case (state_q) 
+        case (state_q)
             WaitingID: begin
                 if (cmd_resp_valid_i) begin
                     cmd_d.cmd_id.local_cmd_id = cmd_resp_i.cmd_id.local_cmd_id;
@@ -838,21 +839,21 @@ module cmd_frontend #(
                     cmd_d.cmd_id.local_cmd_id = cmd_idx;
                 end
             end
-        endcase 
+        endcase
     end
 
     //command issuing
-    always_comb begin 
+    always_comb begin
         rdata_d = rdata_q;
 
-        case (state_q) 
+        case (state_q)
             Ready: begin
                 if (cmd_issued) begin
                     rdata_d = cmd_idx;
                 end
 
                 if (test_issued) begin
-                    rdata_d = (wt_cmd_finished) ? 32'h0000_0001 : '0; 
+                    rdata_d = (wt_cmd_finished) ? 32'h0000_0001 : '0;
                 end
             end
 
@@ -866,7 +867,7 @@ module cmd_frontend #(
 
     always_ff @(posedge clk_i, negedge rst_ni) begin
         if (~rst_ni) begin
-            state_q <= Ready; 
+            state_q <= Ready;
             free_cmd_ids_q <= '0;
             wt_cmd_idx_q <= '0;
             rvalid_q <= 1'b0;

@@ -35,7 +35,7 @@ namespace PsPIN
                 return elements.size() >= capacity;
             }
 
-            bool is_empty() 
+            bool is_empty()
             {
                 return elements.empty();
             }
@@ -52,7 +52,7 @@ namespace PsPIN
                 return elements.front();
             }
 
-            void pop() 
+            void pop()
             {
                 assert(!is_empty());
                 elements.pop();
@@ -86,7 +86,7 @@ namespace PsPIN
             mem_size_t      her_meta_scratchpad_3_size;
         };
 
-        class Feedback 
+        class Feedback
         {
         public:
             uint16_t        feedback_msgid;
@@ -95,7 +95,7 @@ namespace PsPIN
         };
 
 
-        class Task 
+        class Task
         {
         public:
             uint16_t    msgid;
@@ -127,9 +127,9 @@ namespace PsPIN
 
             bool push_her(HER& h) {
                 bool was_idle = false;
-                if (state==Idle) 
+                if (state==Idle)
                 {
-                    was_idle=true; 
+                    was_idle=true;
                     fmq_init(h);
                 }
 
@@ -149,11 +149,11 @@ namespace PsPIN
                     else state = Idle;
                 }
                 else if (state == THReady) state = Idle;
-                printf("FMQ feedback; state: %u\n", state);
+                //printf("FMQ feedback; state: %u\n", state);
                 return state == Idle;
             }
 
-            Task produce_next_task() 
+            Task produce_next_task()
             {
                 assert(this->is_ready());
                 task_in_flight++;
@@ -168,16 +168,26 @@ namespace PsPIN
                     state = HHDraining;
                 } else if (state == PHReady) {
                     t.handler_addr = h.her_meta_ph_addr;
-                    
+
                     // if this is the last task we send, then prepare for completion
                     if (eom_seen && hers.size() == 1) state = PHDraining;
+                    /*
+                    if (eom_seen && hers.size() == 1)
+                    {
+                        pop_her = !has_th;
+                        state = PHDraining;
+                    }
+                    */
+
                     else pop_her = true;
 
-                } else {
+                } else if (state == THReady) {
                     t.handler_addr = h.her_meta_th_addr;
                     pop_her = true;
+                } else {
+                    assert(0);
                 }
-                
+
                 t.handler_size = 4096;
                 t.host_mem_addr = h.her_meta_host_mem_addr;
                 t.host_mem_size = h.her_meta_host_mem_size;
@@ -196,8 +206,7 @@ namespace PsPIN
                 t.scratchpad_size[3] = h.her_meta_scratchpad_3_size;
                 t.trigger_feedback = pop_her;
 
-
-                printf("FMQ state=%u; trigger_feedback=%u\n", state, pop_her);
+                //printf("FMQ state=%u; trigger_feedback=%u\n", state, pop_her);
                 if (pop_her) hers.pop();
 
                 return t;
@@ -208,6 +217,7 @@ namespace PsPIN
             }
 
             bool is_ready() {
+
                 return !hers.empty() && (state == HHReady || state == PHReady || state == THReady);
             }
 
@@ -238,7 +248,7 @@ namespace PsPIN
                 return false;
             }
 
-            FMQ& get_next() 
+            FMQ& get_next()
             {
                 for (int i=0; i<fmqs.size(); i++) {
                     FMQ& curr = fmqs[next];
@@ -255,7 +265,7 @@ namespace PsPIN
 
     public:
 
-        FMQEngine(fmq_control_port_concrete_t& ni_port, task_control_port_t& sched_port, uint32_t num_fmqs = 1024) 
+        FMQEngine(fmq_control_port_concrete_t& ni_port, task_control_port_t& sched_port, uint32_t num_fmqs = 1024)
         : ni_port(ni_port), sched_port(sched_port), feedback_buffer(1), feedbacks_to_send(0), fmq_arbiter(fmqs), num_fmqs(num_fmqs), active_fmqs(0)
         {
             //clean NI port state
@@ -274,14 +284,14 @@ namespace PsPIN
 
         void posedge()
         {
-            // in this order there is at least one cycle between the receiving of a HER and 
+            // in this order there is at least one cycle between the receiving of a HER and
             // the scheduling of the respective task
             // oh well, if the compiler doesn't reorder these two
             produce_output_posedge();
             check_new_tasks_posedge();
 
-            // if we keep this call order, a feedback goes through 
-            // in a single cycle if it does not stall (as it happens 
+            // if we keep this call order, a feedback goes through
+            // in a single cycle if it does not stall (as it happens
             // in the cycle accurate simulation)
             check_new_feedbacks_posedge();
             progress_feedbacks_posedge();
@@ -298,9 +308,9 @@ namespace PsPIN
             produce_output_negedge();
         }
 
-        void check_new_tasks_posedge() 
+        void check_new_tasks_posedge()
         {
-            if (ni_port.her_ready_o && ni_port.her_valid_i) 
+            if (ni_port.her_ready_o && ni_port.her_valid_i)
             {
                 SIM_PRINT("Received HER from NIC\n");
                 HER new_her;
@@ -398,7 +408,7 @@ namespace PsPIN
             FMQ& fmq_to_sched = fmq_arbiter.get_next();
 
             Task task = fmq_to_sched.produce_next_task();
-            
+
             //they should just be of the same type :(
             *sched_port.task_o.handler_addr = task.handler_addr;
             *sched_port.task_o.handler_size = task.handler_size;
@@ -421,10 +431,10 @@ namespace PsPIN
 
             *sched_port.task_valid_o = 1;
 
-            SIM_PRINT("Sending task to scheduler\n");
+            printf("[BMARK]: her=0x%x t_sent_to_lsched=%lu\n", task.pkt_addr, sim_time());
         }
 
-        void produce_output_negedge() 
+        void produce_output_negedge()
         {
             sched_not_ready = false;
             if (*sched_port.task_valid_o && !(*sched_port.task_ready_i))
