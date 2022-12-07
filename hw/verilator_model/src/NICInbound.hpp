@@ -386,14 +386,21 @@ namespace PsPIN
         // Progress HERs
         void her_progress_posedge()
         {
-	    *ni_ctrl.her_valid_o = 0;
-
-	    if (!(*ni_ctrl.her_ready_i))
-	    {
+            if (her_cmd_wait)
+            {
                 ni_ctrl_stalls++;
                 return;
             }
-            
+
+            *ni_ctrl.her_valid_o = 0;
+
+
+            if (ready_hers.empty())
+            {
+                return;
+            }
+
+
             her_descr_t her = ready_hers.front();
 
             *ni_ctrl.her_o.msgid = her.msgid;
@@ -442,6 +449,7 @@ namespace PsPIN
             total_bytes_sent += her.her_size;
             total_pkts++;
 
+            assert(hers_to_send >= 0);
             if (hers_to_send == 0 && app_sent_eos)
             {
                 *ni_ctrl.eos_o = 1;
@@ -450,7 +458,6 @@ namespace PsPIN
 
         void her_progress_negedge()
         {
-
             her_cmd_wait = false;
             if (*ni_ctrl.her_valid_o && !(*ni_ctrl.her_ready_i))
             {

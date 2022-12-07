@@ -62,25 +62,21 @@ int main(int argc, char **argv)
     const char *ph = "synthetic_ph";
     const char *th = NULL;
     const char *base_addr = "192.168.0.";
-    char matching_addr[GDRIVER_MATCHING_CTX_MAXSIZE];
+    uint8_t priority = 42;
     benchmark_params_t params;
+    char matching_addr[GDRIVER_MATCHING_CTX_MAXSIZE];
     int ectx_num, ret;
-
-    params.loop_spin_count = 1000000;
-    params.dma_to_size = 64;
-    params.dma_to_count = 0;
-    params.dma_from_size = 64;
-    params.dma_from_count = 0;
 
     if (gdriver_init(argc, argv, match_ectx_cb, &ectx_num) != GDRIVER_OK)
         return EXIT_FAILURE;
 
     for (int ectx_id = 0; ectx_id < ectx_num; ectx_id++) {
-        sprintf(matching_addr, "%s%u", base_addr, ectx_id + 1);
+        sprintf(matching_addr, "%s%u", base_addr, ectx_id);
         ret = gdriver_add_ectx(handlers_file, hh, ph, th,
                                fill_packet,
                                (void *)&params,
                                sizeof(params),
+                               priority,
                                matching_addr,
                                strlen(matching_addr) + 1);
         if (ret != GDRIVER_OK) {

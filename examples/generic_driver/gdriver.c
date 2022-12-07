@@ -28,7 +28,7 @@
 
 #define MAGIC_PATH "NULL"
 
-#define EC_MAX_NUM 2
+#define EC_MAX_NUM 16
 
 #define NIC_L2_ADDR 0x1c300000
 #define NIC_L2_SIZE (1024 * 1024)
@@ -41,6 +41,8 @@
 #define SCRATCHPAD_REL_ADDR 0
 #define SCRATCHPAD_SIZE (800 * 1024)
 #define SCRATCHPAD_EC_CHUNK_SIZE (SCRATCHPAD_SIZE / EC_MAX_NUM)
+
+#define CYCLES_PER_BYTE 0.02
 
 #define EC_MEM_BASE_ADDR(generic_ectx_id, base, chunk_size) \
     (base + (generic_ectx_id * chunk_size))
@@ -164,10 +166,11 @@ static void gdriver_generate_packets()
 static void gdriver_parse_trace()
 {
     uint32_t nsources, npackets, max_pkt_size;
-    uint32_t msgid, pkt_id, hpu, dmaw, dmar, outbound;
+    uint32_t msgid, priority, fmq_idx, pkt_id, hpu, dmaw, dmar, outbound;
     uint32_t pkt_size, ipg, wait_cycles, l1_pkt_size;
     char src_addr[GDRIVER_MATCHING_CTX_MAXSIZE];
     char dst_addr[GDRIVER_MATCHING_CTX_MAXSIZE];
+    char app_name[GDRIVER_MATCHING_CTX_MAXSIZE];
     uint8_t *pkt_buf;
     int is_last, matched, ret, ectx_id;
 
@@ -180,35 +183,22 @@ static void gdriver_parse_trace()
     assert(nsources > 0 && nsources <= sim_state.num_ectxs);
     assert(npackets > 0);
 
-    /* TODO: remove me from traces */
-    for (int i = 0; i < nsources; i++)
-        fscanf(trace_file, "%s %u %u %u %u %u\n",
-            src_addr, &pkt_size, &msgid, &hpu, &dmaw, &dmar);
+    for (int i = 0; i < nsources; i++) {
+        fscanf(trace_file, "%s %s %u %u %u %u %u\n",
+               src_addr, app_name, &outbound, &fmq_idx, &hpu, &dmaw, &dmar);
+    }
 
     pkt_buf = (uint8_t *)malloc(sizeof(uint8_t) * max_pkt_size);
     assert(pkt_buf != NULL);
 
     sim_state.ttrace.packets_parsed = 0;
-    wait_cycles = 0;
+
     while (!feof(trace_file)) {
         /* TODO/FIXME: for now dmaw/dmar/outbound are useless */
         ret = fscanf(trace_file, "%s %s %u %u %u %d %u %u %u %u\n",
             src_addr, dst_addr, &pkt_size, &msgid, &pkt_id,
             &is_last, &hpu, &dmaw, &dmar, &outbound);
         assert(ret == 10);
-
-        /* FIXME: here we stupidly assume that we can mask FMQs bits */
-        msgid = msgid & 1111;
-
-        printf("%s %s %u %u %d %u\n", src_addr, dst_addr, pkt_size, msgid, is_last, hpu);
-
-        /* FIXME: we'll probably will not have IPGs */
-        //if (pkt_size == 0) {
-        //    assert(wait_cycles == 0);
-        //    assert(ipg > 0);
-        //    wait_cycles = ipg;
-        //} else {
-        //    assert(ipg == 0);
 
         matched = 0;
         for (ectx_id = 0; ectx_id < sim_state.num_ectxs; ectx_id++) {
@@ -219,10 +209,16 @@ static void gdriver_parse_trace()
             }
         }
 
+        fmq_idx = ectx_id;
+        printf("%s %u %u %d %u\n", src_addr, pkt_size, fmq_idx, is_last, hpu);
+
         assert(matched);
 
-        gdriver_fill_pkt(ectx_id, msgid, (void *)&hpu, pkt_buf, pkt_size, &l1_pkt_size);
-        pspinsim_packet_add(&(sim_state.ectxs[ectx_id].ectx), msgid,
+        wait_cycles = (int)(pkt_size * CYCLES_PER_BYTE); // 20 cycles at 400Gbit/s
+        assert(wait_cycles > 1);
+
+        gdriver_fill_pkt(ectx_id, fmq_idx, (void *)&hpu, pkt_buf, pkt_size, &l1_pkt_size);
+        pspinsim_packet_add(&(sim_state.ectxs[ectx_id].ectx), fmq_idx,
             pkt_buf, pkt_size, l1_pkt_size, is_last, wait_cycles, ectx_id);
 
         sim_state.ttrace.packets_parsed++;
@@ -265,7 +261,7 @@ static int gdriver_init_ectx(gdriver_ectx_t *gectx, uint32_t gectx_id,
     const char *handlers_exe, const char *hh_name,
     const char *ph_name, const char *th_name,
     fill_packet_fun_t fill_cb, void *l2_img, size_t l2_img_size,
-    void *matching_ctx, size_t matching_ctx_size)
+    uint8_t priority, void *matching_ctx, size_t matching_ctx_size)
 {
     spin_nic_addr_t hh_addr = 0, ph_addr = 0, th_addr = 0;
     size_t hh_size = 0, ph_size = 0, th_size = 0;
@@ -324,6 +320,8 @@ static int gdriver_init_ectx(gdriver_ectx_t *gectx, uint32_t gectx_id,
     if (matching_ctx)
         strcpy(gectx->matching_ctx, matching_ctx);
 
+    pspinsim_set_fmq_prio(gectx_id, priority);
+
     gdriver_dump_ectx_info(gectx);
 
     return GDRIVER_OK;
@@ -331,7 +329,7 @@ static int gdriver_init_ectx(gdriver_ectx_t *gectx, uint32_t gectx_id,
 
 int gdriver_add_ectx(const char *hfile, const char *hh, const char *ph, const char *th,
      fill_packet_fun_t fill_pkt_cb, void *l2_img, size_t l2_img_size,
-     void *matching_ctx, size_t matching_ctx_size)
+     uint8_t prio, void *matching_ctx, size_t matching_ctx_size)
 {
     int ret;
 
@@ -345,6 +343,7 @@ int gdriver_add_ectx(const char *hfile, const char *hh, const char *ph, const ch
         &(sim_state.ectxs[sim_state.num_ectxs]), sim_state.num_ectxs,
         hfile, hh, ph, th,
         fill_pkt_cb, l2_img, l2_img_size,
+        prio,
         matching_ctx, matching_ctx_size)) {
         return GDRIVER_ERR;
     }

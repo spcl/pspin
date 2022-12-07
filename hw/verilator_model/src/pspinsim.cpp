@@ -1,11 +1,11 @@
 // Copyright 2020 ETH Zurich
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,7 +47,7 @@
 #define DEFAULT_NO_AXI_AR_BUFFER 32
 #define DEFAULT_NO_AXI_R_BUFFER 32
 //#define DEFAULT_NO_NETWORK_G NETWORK_G_200G
-#define DEFAULT_NO_NETWORK_G 0 
+#define DEFAULT_NO_NETWORK_G 0
 #define DEFAULT_NO_MAX_PKT_SIZE 2048
 #define DEFAULT_NO_NET_PKT_QUEUE_LEN 32
 
@@ -115,7 +115,7 @@ int pspinsim_default_conf(pspin_conf_t *conf)
     return SPIN_SUCCESS;
 }
 
-int pspinsim_init(int argc, char **argv, pspin_conf_t *conf) 
+int pspinsim_init(int argc, char **argv, pspin_conf_t *conf)
 {
     Verilated::commandArgs(argc, argv);
     Vpspin_verilator *tb = new Vpspin_verilator();
@@ -129,7 +129,7 @@ int pspinsim_init(int argc, char **argv, pspin_conf_t *conf)
 
     // Define ports
     AXI_MASTER_PORT_ASSIGN(tb, ni_slave, &ni_mst);
-    NI_CTRL_PORT_ASSIGN(&fmq_input_port, her, &ni_control)    
+    NI_CTRL_PORT_ASSIGN(&fmq_input_port, her, &ni_control)
     AXI_MASTER_PORT_ASSIGN(tb, no_slave, &no_mst);
     NO_CMD_PORT_ASSIGN(tb, nic_cmd, &no_cmd);
     AXI_SLAVE_PORT_ASSIGN(tb, host_master, &pcie_slv_port);
@@ -150,7 +150,7 @@ int pspinsim_init(int argc, char **argv, pspin_conf_t *conf)
     sim->add_module(*pcie_mst);
     sim->add_module(*fmq_eng);
 
-    //before the reset!    
+    //before the reset!
     const char *slm_files_path = conf->slm_files_path;
     if (slm_files_path==NULL) {
         char *pspin_hw_env = getenv("PSPIN_HW");
@@ -187,7 +187,7 @@ int pspinsim_run_tick(uint8_t* done_flag)
     return SPIN_SUCCESS;
 }
 
-int pspinsim_fini() 
+int pspinsim_fini()
 {
     printf("\n###### Statistics ######\n");
     for (auto it = sim->get_modules().begin(); it != sim->get_modules().end(); ++it){
@@ -195,7 +195,7 @@ int pspinsim_fini()
         printf("----------------------------------\n");
     }
     delete sim;
-    
+
     return SPIN_SUCCESS;
 }
 
@@ -219,6 +219,11 @@ int pspinsim_packet_add(spin_ec_t* ec, uint32_t msgid, uint8_t* pkt_data, size_t
     return ni->add_packet(her, pkt_data, pkt_len, wait_cycles);
 }
 
+void pspinsim_set_fmq_prio(uint32_t fmq_idx, uint8_t prio)
+{
+    fmq_eng->set_fmq_priority(fmq_idx, prio);
+}
+
 int pspinsim_packet_eos()
 {
     ni->set_eos();
@@ -227,7 +232,7 @@ int pspinsim_packet_eos()
 
 int pspinsim_cb_set_pkt_out(pkt_out_cb_t cb)
 {
-    NICOutbound<AXIPort<uint32_t, uint64_t>>::out_packet_cb_t f(cb);   
+    NICOutbound<AXIPort<uint32_t, uint64_t>>::out_packet_cb_t f(cb);
     no->set_packet_out_cb(f);
     return SPIN_SUCCESS;
 }
@@ -264,7 +269,7 @@ int pspinsim_cb_set_pcie_mst_read_completion(pcie_mst_read_cb_t cb)
 
 int pspinsim_cb_set_pkt_feedback(pkt_feedback_cb_t cb)
 {
-    NICInbound<AXIPort<uint32_t, uint64_t>>::pkt_feedback_cb_t f(cb);   
+    NICInbound<AXIPort<uint32_t, uint64_t>>::pkt_feedback_cb_t f(cb);
     ni->set_feedback_cb(f);
     return SPIN_SUCCESS;
 }
