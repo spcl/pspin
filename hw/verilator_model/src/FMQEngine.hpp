@@ -1,5 +1,7 @@
 #pragma once
 
+#include <limits>
+
 #include "Vpspin_verilator.h"
 #include "verilated.h"
 #include "SimModule.hpp"
@@ -114,7 +116,7 @@ namespace PsPIN
 
         class FMQ {
         public:
-            FMQ(): state(Idle), eom_seen(false), task_in_flight(0), priority(0)
+            FMQ(): state(Idle), eom_seen(false), task_in_flight(0), priority(0), avg_throughput(0.0), hpus_used(0), active_cycles(0)
             {}
 
             void fmq_init(HER& h)
@@ -237,6 +239,26 @@ namespace PsPIN
                 return priority;
             }
 
+            uint32_t get_tasks_in_flight() {
+                return task_in_flight;
+            }
+
+        void update_metric() {
+        if (hers.size() || task_in_flight > 0) {
+            active_cycles++;
+        }
+
+        hpus_used += task_in_flight;
+
+        if (active_cycles > 0) {
+            avg_throughput = (double) hpus_used / (double)active_cycles;
+        }
+        }
+
+        double get_metric() {
+        return avg_throughput;
+        }
+
             bool is_idle() {
                 return state == Idle;
             }
@@ -248,29 +270,7 @@ namespace PsPIN
 
         private:
             enum State {Idle=0, HHReady, HHDraining, PHReady, PHDraining, THReady};
-            /*
-            void check_state_change(int new_state):
-                switch(new_state) {
-                case Idle:
-                    assert(hers.empty())
-                    break;
-                case HHReady:
-                    if (state == Idle) {
-                        assert(hers.empty())
-                    }
-                    break;
-                case HHDraining:
-                    break;
-                case PHReady:
-                    break;
-                case PHDraining:
-                    break;
-                case THReady:
-                    break;
-                default:
-                    assert(0);
-                }
-            */
+
         private:
             std::queue<HER> hers;
             State state;
@@ -278,6 +278,9 @@ namespace PsPIN
             bool has_th;
             uint32_t task_in_flight;
             uint8_t priority;
+        double avg_throughput;
+        uint64_t hpus_used;
+        uint64_t active_cycles;
         };
 
         class FMQArbiter {
@@ -320,6 +323,70 @@ namespace PsPIN
             uint32_t next;
         };
 
+        class FMQRRWArbiter : public FMQArbiter {
+        public:
+            FMQRRWArbiter(std::vector<FMQ> &fmqs)
+                : FMQArbiter(fmqs), credit(0), curr(0)
+            {}
+
+            FMQ& get_next()
+            {
+                if (credit == 0 || !fmqs[curr].is_ready()) {
+                    for (int i = 0; i < fmqs.size(); i++) {
+                        uint32_t next = (curr + 1) % fmqs.size();
+
+                        if (fmqs[next].is_ready()) {
+                            curr = next;
+                            credit = fmqs[next].get_priority() + 1;
+                            return fmqs[curr];
+                        }
+                        curr = next;
+                    }
+                    assert(0);
+                } else {
+                    assert(credit > 0);
+                    printf("[FMQRRWARBITER]: credit=%u\n", credit);
+                    credit--;
+                    return fmqs[curr];
+                }
+            }
+        private:
+            uint8_t credit;
+            uint32_t curr;
+        };
+
+    class FMQRHArbiter : public FMQArbiter {
+        public:
+            FMQRHArbiter(std::vector<FMQ> &fmqs)
+                : FMQArbiter(fmqs), credit(0), curr(0)
+            {}
+
+            FMQ& get_next()
+            {
+                double min_rank = std::numeric_limits<double>::max();
+
+                for (int i = 0; i < fmqs.size(); i++)
+                {
+                    FMQ& cur_fmq = fmqs[i];
+                    if (cur_fmq.is_ready()) {
+                        double rank = (double)cur_fmq.get_metric() / (double)(cur_fmq.get_priority() + 1);
+                        printf("[DEBUG]: RobinHood; fmq_id=%d metric=%lf prio=%u rank=%f\n", i, cur_fmq.get_metric(), cur_fmq.get_priority(), rank);
+                        if (rank < min_rank) {
+                            min_rank = rank;
+                            curr = i;
+                        }
+                    }
+                }
+
+                assert(min_rank < UINT64_MAX);
+
+                return fmqs[curr];
+            }
+        private:
+            uint8_t credit;
+            uint32_t curr;
+        };
+
     public:
 
         FMQEngine(fmq_control_port_concrete_t& ni_port, task_control_port_t& sched_port, uint32_t num_fmqs = 1024)
@@ -345,8 +412,17 @@ namespace PsPIN
                     printf("FMQ: RR arbiter\n");
                     fmq_arbiter = new FMQRRArbiter(fmqs);
                 }
-                else
+                else if (!strcmp(arbiter_type_env, "RRW"))
                 {
+                    printf("FMQ: WRR arbiter\n");
+                    fmq_arbiter = new FMQRRWArbiter(fmqs);
+                }
+        else if (!strcmp(arbiter_type_env, "RH"))
+                {
+                    printf("FMQ: RobinHood arbiter\n");
+                    fmq_arbiter = new FMQRHArbiter(fmqs);
+                }
+                else {
                     assert(0);
                 }
             }
@@ -484,7 +560,11 @@ namespace PsPIN
 
         void produce_output_posedge()
         {
-            if (sched_not_ready) return;
+        for (auto &fmq : fmqs) {
+        fmq.update_metric();
+        }
+
+        if (sched_not_ready) return;
 
             *sched_port.task_valid_o = 0;
 
@@ -515,8 +595,8 @@ namespace PsPIN
             *sched_port.task_o.trigger_feedback = task.trigger_feedback;
             *sched_port.task_valid_o = 1;
 
-            printf("[BMARK]: her=0x%x t_sent_to_lsched=%lu sched_ready=%u\n", task.pkt_addr,
-                   sim_time(), *sched_port.task_ready_i);
+            printf("[BMARK]: her=0x%x t_sent_to_lsched=%lu\n", task.pkt_addr,
+                   sim_time());
         }
 
         void produce_output_negedge()

@@ -76,7 +76,7 @@ int main(int argc, char **argv)
                                fill_packet,
                                (void *)&params,
                                sizeof(params),
-                               priority,
+                               ectx_id % 8,
                                matching_addr,
                                strlen(matching_addr) + 1);
         if (ret != GDRIVER_OK) {
