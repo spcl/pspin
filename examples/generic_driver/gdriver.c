@@ -112,23 +112,24 @@ static void gdriver_fill_pkt(int ectx_idx, uint32_t msg_idx, uint32_t pkt_idx,
     pkt_hdr_t *hdr;
 
     if (sim_state.ectxs[ectx_idx].pkt_fill_cb != NULL) {
-	pkt_size = sim_state.ectxs[ectx_idx].pkt_fill_cb(
-	    msg_idx, pkt_idx, pkt_buf, sim_state.tgen.packet_size, l1_pkt_size);
+        pkt_size = sim_state.ectxs[ectx_idx].pkt_fill_cb(
+            msg_idx, pkt_idx, pkt_buf, sim_state.tgen.packet_size, l1_pkt_size);
     } else {
-	// generate IP+UDP headers
-	hdr = (pkt_hdr_t*)pkt_buf;
-	hdr->ip_hdr.ihl = 5;
-	hdr->ip_hdr.length = pkt_size;
-	*l1_pkt_size = pkt_size;
-	// TODO: set other fields
+        // generate IP+UDP headers
+        hdr = (pkt_hdr_t*)pkt_buf;
+        hdr->ip_hdr.ihl = 5;
+        hdr->ip_hdr.length = pkt_size;
+        // TODO: set other fields
     }
+
+    *l1_pkt_size = pkt_size;
 }
 
 static void gdriver_generate_packets()
 {
     uint32_t global_msg_counter = 0, global_packet_counter = 0;
     uint8_t *pkt_buf;
-    uint32_t pkt_size, l1_pkt_size, delay;    
+    uint32_t pkt_size, l1_pkt_size, delay;
     int is_last;
 
     printf("[GDRIVER]: Using default packet generator\n");
@@ -141,15 +142,15 @@ static void gdriver_generate_packets()
             for (uint32_t pkt_idx = 0; pkt_idx < sim_state.tgen.num_packets; pkt_idx++) {
                 pkt_size = sim_state.tgen.packet_size;
 
-		gdriver_fill_pkt(ectx_idx, global_msg_counter + msg_idx, global_packet_counter + pkt_idx,
-		    pkt_buf, pkt_size, &l1_pkt_size);                
+                gdriver_fill_pkt(ectx_idx, global_msg_counter + msg_idx, global_packet_counter + pkt_idx,
+                    pkt_buf, pkt_size, &l1_pkt_size);
                 is_last = (pkt_idx + 1 == sim_state.tgen.num_packets);
                 delay = (is_last) ? sim_state.tgen.message_delay : sim_state.tgen.packet_delay;
 
                 pspinsim_packet_add(&(sim_state.ectxs[ectx_idx].ectx), global_msg_counter + msg_idx,
                     pkt_buf, pkt_size, l1_pkt_size, is_last, delay, 0);
 
-		sim_state.tgen.packets_sent++;
+                sim_state.tgen.packets_sent++;
                 global_packet_counter++;
             }
             global_msg_counter++;
@@ -204,11 +205,11 @@ static void gdriver_parse_trace()
             }
             assert(matched);
 
-	    gdriver_fill_pkt(ectx_id, msgid, 0, pkt_buf, pkt_size, &l1_pkt_size);
-	    pspinsim_packet_add(&(sim_state.ectxs[ectx_id].ectx), msgid,
-		pkt_buf, pkt_size, l1_pkt_size, is_last, wait_cycles, 0);
+            gdriver_fill_pkt(ectx_id, msgid, 0, pkt_buf, pkt_size, &l1_pkt_size);
+            pspinsim_packet_add(&(sim_state.ectxs[ectx_id].ectx), msgid,
+                pkt_buf, pkt_size, l1_pkt_size, is_last, wait_cycles, 0);
 
-	    wait_cycles = 0;
+            wait_cycles = 0;
         }
         sim_state.ttrace.packets_parsed++;
     }
@@ -313,7 +314,7 @@ int gdriver_add_ectx(const char *hfile, const char *hh, const char *ph, const ch
         return GDRIVER_ERR;
 
     if (gdriver_init_ectx(
-	&(sim_state.ectxs[sim_state.num_ectxs]), sim_state.num_ectxs,
+    &(sim_state.ectxs[sim_state.num_ectxs]), sim_state.num_ectxs,
         hfile, hh, ph, th,
         fill_pkt_cb, l2_img, l2_img_size,
         matching_ctx, matching_ctx_size)) {
